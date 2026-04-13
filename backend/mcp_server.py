@@ -13,7 +13,9 @@ from openai import OpenAI
 
 load_dotenv()
 
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# Get API key and strip any whitespace/newlines
+api_key = os.getenv("OPENAI_API_KEY", "").strip()
+client = OpenAI(api_key=api_key)
 
 # ═══════════════════════════════════════════════════════════════════════════
 # HARD-CODED LANGUAGE TOPICS

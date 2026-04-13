@@ -46,8 +46,9 @@ load_dotenv()
 # Initialize FastAPI app
 app = FastAPI()
 
-# Initialize OpenAI client
-client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+# Initialize OpenAI client (strip whitespace from API key)
+api_key = os.getenv("OPENAI_API_KEY", "").strip()
+client = OpenAI(api_key=api_key)
 
 # Port
 PORT = int(os.getenv("PORT", 5000))
