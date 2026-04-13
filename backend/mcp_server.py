@@ -184,7 +184,7 @@ SUMMARY:
                 {"role": "user", "content": f"Explain '{topic}' for {grade} students learning {subject}."}
             ],
             max_tokens=600,
-            timeout=30
+            temperature=0.7
         )
 
         content = response.choices[0].message.content
