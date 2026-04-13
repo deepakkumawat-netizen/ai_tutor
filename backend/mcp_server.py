@@ -122,7 +122,9 @@ Include only the numbered list. No explanations or other text."""}
         }
 
     except Exception as e:
-        print(f"❌ Error generating topics: {e}")
+        print(f"❌ Error generating topics: {type(e).__name__}: {e}")
+        import traceback
+        traceback.print_exc()
         # Fallback topics
         return {
             "subject": subject,
@@ -248,7 +250,9 @@ SUMMARY:
 
     except Exception as e:
         error_msg = str(e)
-        print(f"❌ Error explaining topic '{topic}': {error_msg}")
+        print(f"❌ Error explaining topic '{topic}': {type(e).__name__}: {error_msg}")
+        import traceback
+        traceback.print_exc()
         # Return error response with empty sections (prevents frontend hang)
         return {
             "topic": topic,
