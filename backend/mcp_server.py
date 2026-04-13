@@ -7,6 +7,7 @@ AI Tutor MCP Server
 
 import os
 import json
+import requests
 from dotenv import load_dotenv
 from openai import OpenAI
 
@@ -182,7 +183,8 @@ SUMMARY:
 [Brief recap in 1-2 sentences]"""},
                 {"role": "user", "content": f"Explain '{topic}' for {grade} students learning {subject}."}
             ],
-            max_tokens=900
+            max_tokens=600,
+            timeout=30
         )
 
         content = response.choices[0].message.content
@@ -245,7 +247,23 @@ SUMMARY:
         }
 
     except Exception as e:
-        return {"error": str(e)}
+        error_msg = str(e)
+        print(f"❌ Error explaining topic '{topic}': {error_msg}")
+        # Return error response with empty sections (prevents frontend hang)
+        return {
+            "topic": topic,
+            "grade": grade,
+            "subject": subject,
+            "explanation": f"Sorry, I couldn't explain this topic. Please try again.",
+            "sections": {
+                "definition": "Unable to load definition",
+                "keyPoints": "Unable to load key points",
+                "example": "Unable to load example",
+                "summary": "Unable to load summary"
+            },
+            "gradeLevel": grade_num,
+            "error": error_msg
+        }
 
 def practice_question(subject: str, grade: str) -> dict:
     """Generate a practice question"""
@@ -270,8 +288,6 @@ def practice_question(subject: str, grade: str) -> dict:
 
 def get_educational_videos(subject: str, grade: str, topic: str = None) -> dict:
     """Get educational YouTube videos for a subject, topic, and grade level"""
-    import requests
-
     try:
         youtube_api_key = os.getenv("YOUTUBE_API_KEY")
 

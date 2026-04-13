@@ -290,9 +290,21 @@ async def practice_question(request: PracticeQuestionRequest):
 @app.post("/api/youtube")
 async def youtube_search(request: YouTubeRequest):
     """Search for YouTube videos using MCP tool (single source of truth)."""
-    topic = request.topic or request.query or request.subject
-    print(f"🎬 Searching videos for {topic} ({request.grade})...")
-    return mcp_get_videos(request.subject, request.grade, topic)
+    try:
+        topic = request.topic or request.query or request.subject
+        print(f"🎬 Searching videos for {topic} ({request.grade})...")
+        result = mcp_get_videos(request.subject, request.grade, topic)
+        return result
+    except Exception as e:
+        print(f"❌ Error searching YouTube: {e}")
+        # Return graceful error response instead of 500
+        return {
+            "subject": request.subject,
+            "grade": request.grade,
+            "videos": [],
+            "error": "Unable to fetch videos. Please try again later.",
+            "message": "YouTube search is temporarily unavailable"
+        }
 
 # ─── Serve Frontend ──────────────────────────────────────────────────────────
 
