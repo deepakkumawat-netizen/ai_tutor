@@ -7,7 +7,10 @@ const BLUE = "#399aff";
 const DARK = "#ffffff";
 const CARD_BG = "#e8f3ff";
 const BORDER = "#399aff";
-const API = "http://localhost:5000"; // Backend API running on port 5000
+// Backend API - use localhost for dev, current origin for production (Render)
+const API = window.location.hostname === 'localhost'
+  ? 'http://localhost:5000'
+  : window.location.origin;
 
 const ALL_SUBJECTS = Object.entries(SUBJECTS).map(([id, sub]) => ({ id, ...sub }));
 
