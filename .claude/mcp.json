@@ -1,0 +1,13 @@
+{
+  "mcpServers": {
+    "ai-tutor": {
+      "command": "python",
+      "args": [
+        "backend/mcp_server.py"
+      ],
+      "env": {
+        "PYTHONPATH": "."
+      }
+    }
+  }
+}

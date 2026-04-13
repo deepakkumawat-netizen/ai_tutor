@@ -1,0 +1,94 @@
+/* Home Navigation */
+.home-nav-btn {
+  background: #e8f3ff;
+  border: 1.5px solid #399aff;
+  color: #399aff;
+  padding: 6px 14px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-weight: 600;
+  transition: 0.2s;
+}
+
+.home-nav-btn:hover {
+  background: #399aff;
+  color: white;
+}
+
+.current-path {
+  color: #334155;
+  font-weight: 500;
+  margin-left: 15px;
+  opacity: 0.9;
+}
+
+/* Subject View Layout */
+.subject-view {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  overflow-y: auto;
+  padding: 20px;
+  background: #e8f3ff;
+}
+
+/* Media Gallery */
+.learning-materials {
+  background: white;
+  border-radius: 16px;
+  padding: 20px;
+  margin-bottom: 20px;
+  box-shadow: 0 4px 24px rgba(57, 154, 255, 0.12);
+  border: 1.5px solid #399aff;
+}
+
+.media-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  margin-top: 15px;
+}
+
+.media-card {
+  background: #e8f3ff;
+  border-radius: 12px;
+  padding: 15px;
+  border: 1.5px solid #399aff;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.media-card h4 {
+  margin-bottom: 10px;
+  color: #334155;
+}
+
+.topic-img {
+  width: 100%;
+  max-height: 200px;
+  object-fit: contain;
+  border-radius: 8px;
+  background: #fff;
+}
+
+.dl-link {
+  margin-top: 12px;
+  color: #399aff;
+  text-decoration: none;
+  font-weight: bold;
+  font-size: 0.9rem;
+  padding: 8px 16px;
+  border: 1.5px solid #399aff;
+  border-radius: 8px;
+  transition: 0.2s;
+}
+
+.dl-link:hover {
+  background: #399aff;
+  color: white;
+}
+
+@media (max-width: 768px) {
+  .media-grid { grid-template-columns: 1fr; }
+}
