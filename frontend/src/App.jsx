@@ -48,6 +48,7 @@ function Orbs() {
         @keyframes spin { to{transform:rotate(360deg)} }
         @keyframes slideIn { from{opacity:0;transform:translateX(-16px)} to{opacity:1;transform:translateX(0)} }
         @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(1.2)} }
+        @keyframes slideDown { from{opacity:0;transform:translateY(-16px)} to{opacity:1;transform:translateY(0)} }
         .subject-card:hover { transform:translateY(-4px) scale(1.02) !important; box-shadow:0 12px 40px rgba(57,154,255,0.2) !important; border-color:#399aff !important; background:#e8f3ff !important; }
         .send-btn:hover:not(:disabled) { transform:scale(1.07); }
         .chip-btn:hover { background:#e0f0ff !important; border-color:#399aff !important; }
@@ -2260,6 +2261,8 @@ function SubjectPage({ profile, onHome }) {
   // Chat history & usage counter
   const [showHistory, setShowHistory] = useState(false);
   const usageCounterRef = useRef(null);
+  const [limitExceeded, setLimitExceeded] = useState(false);
+  const [limitMessage, setLimitMessage] = useState("");
 
   // Debug log - ensure subject is set correctly
   useEffect(() => {
@@ -2679,6 +2682,13 @@ function SubjectPage({ profile, onHome }) {
             const result = await res.json();
             console.log("[AI-Tutor] Usage incremented response:", result);
 
+            // Check if limit is exceeded
+            if (result.exceeded) {
+              setLimitExceeded(true);
+              setLimitMessage(`⚠️ Daily limit reached! You've used ${result.usage_count}/${result.limit} lessons today. Please try again tomorrow.`);
+              console.log("[AI-Tutor] Daily limit exceeded:", result);
+            }
+
             // Refresh counter after successful increment
             setTimeout(() => {
               console.log("[AI-Tutor] Refreshing counter, ref current:", usageCounterRef.current);
@@ -2785,6 +2795,13 @@ function SubjectPage({ profile, onHome }) {
               });
               const data = await res.json();
               console.log("[AI-Tutor] Usage incremented response:", data);
+
+              // Check if limit is exceeded
+              if (data.exceeded) {
+                setLimitExceeded(true);
+                setLimitMessage(`⚠️ Daily limit reached! You've used ${data.usage_count}/${data.limit} lessons today. Please try again tomorrow.`);
+                console.log("[AI-Tutor] Daily limit exceeded:", data);
+              }
 
               // Refresh counter after successful increment
               setTimeout(() => {
@@ -3702,6 +3719,43 @@ function SubjectPage({ profile, onHome }) {
               </div>
             )}
           </>
+        )}
+
+        {/* Limit Exceeded Message */}
+        {limitExceeded && (
+          <div style={{
+            background: "#fee2e2",
+            border: "2px solid #ef4444",
+            borderRadius: "12px",
+            padding: "16px 20px",
+            marginBottom: "16px",
+            color: "#991b1b",
+            fontWeight: "600",
+            display: "flex",
+            alignItems: "center",
+            gap: "12px",
+            animation: "slideDown 0.3s ease"
+          }}>
+            <span style={{ fontSize: "24px" }}>🛑</span>
+            <div>
+              <div style={{ fontWeight: "700", marginBottom: "4px" }}>Daily Limit Reached!</div>
+              <div style={{ fontSize: "14px", fontWeight: "500" }}>{limitMessage}</div>
+            </div>
+            <button
+              onClick={() => setLimitExceeded(false)}
+              style={{
+                marginLeft: "auto",
+                background: "none",
+                border: "none",
+                color: "#991b1b",
+                fontSize: "20px",
+                cursor: "pointer",
+                padding: "4px 8px"
+              }}
+            >
+              ✕
+            </button>
+          </div>
         )}
 
         {viewMode === "lesson" && messages.map((msg, i) => (

@@ -4,6 +4,7 @@ const ChatHistory = ({ studentId, isOpen, onClose, onSelectChat, apiUrl = 'http:
   const [chats, setChats] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [, setLiveTime] = useState(new Date()); // Force re-render for live time updates
 
   const fetchChatHistory = async () => {
     try {
@@ -47,16 +48,36 @@ const ChatHistory = ({ studentId, isOpen, onClose, onSelectChat, apiUrl = 'http:
     }
   }, [isOpen, studentId]);
 
+  // Live time updates - update every minute to show relative times
+  useEffect(() => {
+    if (!isOpen) return; // Only update when sidebar is open
+
+    const timer = setInterval(() => {
+      setLiveTime(new Date());
+    }, 60000); // Update every 60 seconds (1 minute)
+
+    return () => clearInterval(timer);
+  }, [isOpen]);
+
   const formatDate = (dateString) => {
     const date = new Date(dateString);
-    const today = new Date();
-    const yesterday = new Date(today);
-    yesterday.setDate(yesterday.getDate() - 1);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffMins = Math.floor(diffMs / 60000);
+    const diffHours = Math.floor(diffMs / 3600000);
+    const diffDays = Math.floor(diffMs / 86400000);
 
-    if (date.toDateString() === today.toDateString()) {
-      return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-    } else if (date.toDateString() === yesterday.toDateString()) {
+    // Show relative time for recent chats
+    if (diffMins < 1) {
+      return 'just now';
+    } else if (diffMins < 60) {
+      return `${diffMins}m ago`;
+    } else if (diffHours < 24) {
+      return `${diffHours}h ago`;
+    } else if (diffDays === 1) {
       return 'Yesterday';
+    } else if (diffDays < 7) {
+      return `${diffDays}d ago`;
     } else {
       return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
     }
