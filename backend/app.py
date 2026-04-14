@@ -32,12 +32,18 @@ async def startup_event():
     print("\n" + "="*60)
     print("[✓ STARTUP] AI Tutor Backend v2.0 - Full Features Ready")
     print("="*60)
-    print("[✓] Database: Initialized")
-    print("[✓] Chat History: /api/chat-history (POST)")
-    print("[✓] Check Usage: /api/check-usage (POST)")
-    print("[✓] Increment Usage: /api/increment-usage (POST)")
-    print("[✓] Save Chat: /api/save-chat (POST)")
-    print("[✓] Features: Chat History, Usage Counter, Auto-Cleanup")
+    try:
+        print(f"[✓] Database Path: {db.db_path}")
+        print(f"[✓] Database Connected: {db is not None}")
+        print("[✓] Chat History: /api/chat-history (POST)")
+        print("[✓] Check Usage: /api/check-usage (POST)")
+        print("[✓] Increment Usage: /api/increment-usage (POST)")
+        print("[✓] Save Chat: /api/save-chat (POST)")
+        print("[✓] Features: Chat History, Usage Counter, Auto-Cleanup")
+        print("[✓] All systems operational")
+    except Exception as e:
+        print(f"[✗] ERROR during startup: {e}")
+        print(f"[✗] Database import failed: {type(e).__name__}")
     print("="*60 + "\n")
 
 # Add CORS middleware to allow frontend requests
@@ -71,6 +77,28 @@ class PracticeQuestionRequest(BaseModel):
 class MCPCallRequest(BaseModel):
     tool_name: str
     params: dict
+
+# ═══════════════════════════════════════════════════════════════════════════
+# HEALTH CHECK
+# ═══════════════════════════════════════════════════════════════════════════
+
+@app.get("/health")
+async def health_check():
+    """Health check endpoint that lists all registered routes"""
+    routes = []
+    for route in app.routes:
+        if hasattr(route, 'path') and hasattr(route, 'methods'):
+            routes.append({
+                "path": route.path,
+                "methods": list(route.methods) if route.methods else ["GET"]
+            })
+    return {
+        "status": "healthy",
+        "database": db is not None,
+        "db_path": db.db_path if db else "not initialized",
+        "total_routes": len(routes),
+        "routes": routes
+    }
 
 # ═══════════════════════════════════════════════════════════════════════════
 # API ENDPOINTS - Using MCP Server Functions
