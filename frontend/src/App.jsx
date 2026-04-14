@@ -1,5 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { GRADES, SUBJECTS, getCurriculumTopic, GRADE_TOPICS } from "./constants.js";
+import UsageCounter from "./UsageCounter";
+import ChatHistory from "./ChatHistory";
 
 // ─── Inline styles / design tokens ───────────────────────────────────────────
 const FONT = "'Nunito', sans-serif";
@@ -1336,6 +1338,32 @@ function speak(text, rate, langCode) {
   next();
 }
 
+// ─── Parse sections from content ───────────────────────────────────────────────────
+const parseSections = (content) => {
+  if (!content) return null;
+
+  const sections = {};
+
+  // Try to find DEFINITION section
+  const defMatch = content.match(/DEFINITION:\s*([\s\S]*?)(?=KEY CONCEPTS:|KEY IDEAS:|KEY POINTS:|REAL-WORLD EXAMPLE:|EXAMPLE:|SUMMARY:|REMEMBER THIS:|$)/i);
+  if (defMatch && defMatch[1]) sections.definition = defMatch[1].trim();
+
+  // Try to find KEY CONCEPTS/IDEAS/POINTS section
+  const keyMatch = content.match(/(?:KEY CONCEPTS:|KEY IDEAS:|KEY POINTS:)\s*([\s\S]*?)(?=REAL-WORLD EXAMPLE:|EXAMPLE:|SUMMARY:|REMEMBER THIS:|$)/i);
+  if (keyMatch && keyMatch[1]) sections.keyPoints = keyMatch[1].trim();
+
+  // Try to find REAL-WORLD EXAMPLE section
+  const exampleMatch = content.match(/(?:REAL-WORLD EXAMPLE:|EXAMPLE:)\s*([\s\S]*?)(?=SUMMARY:|REMEMBER THIS:|$)/i);
+  if (exampleMatch && exampleMatch[1]) sections.example = exampleMatch[1].trim();
+
+  // Try to find SUMMARY/REMEMBER section
+  const summaryMatch = content.match(/(?:SUMMARY:|REMEMBER THIS:)\s*([\s\S]*?)$/i);
+  if (summaryMatch && summaryMatch[1]) sections.summary = summaryMatch[1].trim();
+
+  // Return sections only if we found at least one section
+  return Object.keys(sections).length > 0 ? sections : null;
+};
+
 // ─── Lesson scripts ───────────────────────────────────────────────────────────
 const VSCRIPTS = {
   "english|noun": [
@@ -2229,6 +2257,10 @@ function SubjectPage({ profile, onHome }) {
   const [voiceState, setVoiceState] = useState("idle"); // "idle"|"listening"|"processing"|"speaking"
   const [activeSubject, setActiveSubject] = useState(profile.subject);
 
+  // Chat history & usage counter
+  const [showHistory, setShowHistory] = useState(false);
+  const usageCounterRef = useRef(null);
+
   // Debug log - ensure subject is set correctly
   useEffect(() => {
     console.log("SubjectPage mounted with profile.subject:", profile.subject);
@@ -2615,15 +2647,80 @@ function SubjectPage({ profile, onHome }) {
     // Get explanation for the topic
     explainTopic(topic).then(data => {
       if (data) {
+        const response = data.explanation || "Topic explanation loading...";
         const botMessage = {
           role: "bot",
           topic: topic,
-          content: data.explanation || "Topic explanation loading...",
+          content: response,
           sections: data.sections || null
         };
         setMessages([botMessage]);
         // No automatic speaking - user must click "Hear Explanation" button
         setVoiceState("idle");
+
+        // Save to chat history and increment usage
+        const studentId = profile.grade || "student";
+        console.log("[AI-Tutor] Saving lesson chat with content length:", response.length);
+        console.log("[AI-Tutor] API URL:", API);
+        console.log("[AI-Tutor] Student ID:", studentId);
+
+        // Increment usage and refresh counter
+        const incrementUsage = async () => {
+          try {
+            console.log("[AI-Tutor] Calling increment-usage from chooseTopic...");
+            const res = await fetch(`${API}/api/increment-usage`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                student_id: studentId,
+                lesson_type: "lesson"
+              })
+            });
+            const result = await res.json();
+            console.log("[AI-Tutor] Usage incremented response:", result);
+
+            // Refresh counter after successful increment
+            setTimeout(() => {
+              console.log("[AI-Tutor] Refreshing counter, ref current:", usageCounterRef.current);
+              if (usageCounterRef.current) {
+                usageCounterRef.current.refresh();
+                console.log("[AI-Tutor] Counter refresh called");
+              } else {
+                console.error("[AI-Tutor] usageCounterRef.current is null");
+              }
+            }, 100);
+          } catch (e) {
+            console.error("[AI-Tutor] Usage increment error:", e);
+          }
+        };
+
+        // Save chat
+        const saveChat = async () => {
+          try {
+            console.log("[AI-Tutor] Calling save-chat from chooseTopic...");
+            const res = await fetch(`${API}/api/save-chat`, {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                student_id: studentId,
+                topic: topic,
+                grade_level: profile.grade,
+                subject: profile.subject || "General",
+                request_data: { topic: topic },
+                response_preview: response.substring(0, 200),
+                response_content: response
+              })
+            });
+            const result = await res.json();
+            console.log("[AI-Tutor] Chat saved response:", result);
+          } catch (e) {
+            console.error("[AI-Tutor] Save chat error:", e);
+          }
+        };
+
+        // Call both
+        incrementUsage();
+        saveChat();
       } else {
         const errorMsg = "Could not load topic. Please try again.";
         setMessages([{ role:"bot", content: errorMsg }]);
@@ -2666,6 +2763,71 @@ function SubjectPage({ profile, onHome }) {
           };
           setMessages(m => [...m, botMessage]);
           setVoiceState("idle");
+
+          // Save to chat history and increment usage
+          const chatContent = response || "";
+          const studentId = profile.grade || "student";
+          console.log("[AI-Tutor] Saving chat with content length:", chatContent.length);
+          console.log("[AI-Tutor] API URL:", API);
+          console.log("[AI-Tutor] Student ID:", studentId);
+
+          // Increment usage and refresh counter
+          const incrementUsage = async () => {
+            try {
+              console.log("[AI-Tutor] Calling increment-usage...");
+              const res = await fetch(`${API}/api/increment-usage`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  student_id: studentId,
+                  lesson_type: "lesson"
+                })
+              });
+              const data = await res.json();
+              console.log("[AI-Tutor] Usage incremented response:", data);
+
+              // Refresh counter after successful increment
+              setTimeout(() => {
+                console.log("[AI-Tutor] Refreshing counter, ref current:", usageCounterRef.current);
+                if (usageCounterRef.current) {
+                  usageCounterRef.current.refresh();
+                  console.log("[AI-Tutor] Counter refresh called");
+                } else {
+                  console.error("[AI-Tutor] usageCounterRef.current is null");
+                }
+              }, 100);
+            } catch (e) {
+              console.error("[AI-Tutor] Usage increment error:", e);
+            }
+          };
+
+          // Save chat
+          const saveChat = async () => {
+            try {
+              console.log("[AI-Tutor] Calling save-chat...");
+              const res = await fetch(`${API}/api/save-chat`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  student_id: studentId,
+                  topic: text,
+                  grade_level: profile.grade,
+                  subject: profile.subject || "General",
+                  request_data: { question: text },
+                  response_preview: chatContent.substring(0, 200),
+                  response_content: chatContent
+                })
+              });
+              const data = await res.json();
+              console.log("[AI-Tutor] Chat saved response:", data);
+            } catch (e) {
+              console.error("[AI-Tutor] Save chat error:", e);
+            }
+          };
+
+          // Call both
+          incrementUsage();
+          saveChat();
         } else {
           const msg = "Could not process your question. Try again.";
           setMessages(m => [...m, { role:"bot", content: msg }]);
@@ -2746,8 +2908,38 @@ function SubjectPage({ profile, onHome }) {
           </div>
         </div>
 
-        {/* Voice Controls on Right */}
+        {/* Right Controls: History, Usage Counter, Voice */}
         <div style={{ display:"flex", gap:"10px", alignItems:"center" }}>
+          {/* History Button */}
+          <button
+            onClick={() => setShowHistory(!showHistory)}
+            style={{
+              background:"rgba(255,255,255,0.2)",
+              border:"none",
+              cursor:"pointer",
+              fontSize:"18px",
+              padding:"8px 12px",
+              borderRadius:"8px",
+              transition:"all 0.2s",
+              display:"flex",
+              alignItems:"center",
+              justifyContent:"center",
+              color:"white",
+              fontWeight:"600"
+            }}
+            title="Chat history"
+          >
+            📋
+          </button>
+
+          {/* Usage Counter */}
+          <UsageCounter
+            ref={usageCounterRef}
+            apiUrl={API}
+            studentId={profile.grade || "student"}
+            lessonType="lesson"
+          />
+
           {/* Voice State Indicator */}
           <div style={{ display:"flex", alignItems:"center", gap:"6px", fontSize:"12px", fontWeight:"600" }}>
             <div style={{
@@ -3768,6 +3960,39 @@ function SubjectPage({ profile, onHome }) {
           </button>
         </div>
       )}
+
+      {/* Chat History Sidebar */}
+      <ChatHistory
+        apiUrl={API}
+        studentId={profile.grade || "student"}
+        isOpen={showHistory}
+        onClose={() => setShowHistory(false)}
+        onSelectChat={(chat) => {
+          console.log('[AI-Tutor] onSelectChat called:', chat);
+          console.log('[AI-Tutor] Chat content:', chat.content);
+          if (chat.content) {
+            // Load the selected chat WITHOUT calling setActiveTopic (to prevent auto-loading)
+            console.log('[AI-Tutor] Loading chat for topic:', chat.topic);
+
+            // Parse sections from the content
+            const sections = parseSections(chat.content);
+            console.log('[AI-Tutor] Parsed sections:', sections);
+
+            const chatMessage = {
+              role: "bot",
+              topic: chat.topic,
+              content: chat.content,
+              sections: sections
+            };
+            console.log('[AI-Tutor] Setting messages to:', chatMessage);
+            setMessages([chatMessage]);
+            setShowHistory(false);
+            console.log('[AI-Tutor] Chat loaded successfully');
+          } else {
+            console.warn('[AI-Tutor] Chat has no content:', chat);
+          }
+        }}
+      />
     </div>
   );
 }

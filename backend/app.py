@@ -16,6 +16,7 @@ from pathlib import Path
 from typing import Optional
 from pydantic import BaseModel
 from mcp_server import get_topics, explain_topic, practice_question, get_educational_videos, quick_answer, TOOLS
+from database import db
 
 # Fix Unicode encoding on Windows
 if sys.platform == "win32":
@@ -98,6 +99,26 @@ class YouTubeRequest(BaseModel):
     subject: Optional[str] = None
     grade: Optional[str] = None
     topic: Optional[str] = None
+
+class SaveChatRequest(BaseModel):
+    student_id: str
+    topic: str
+    grade_level: str
+    subject: str
+    request_data: dict
+    response_preview: str
+    response_content: str = None
+
+class ChatHistoryRequest(BaseModel):
+    student_id: str
+
+class UsageCheckRequest(BaseModel):
+    student_id: str
+    lesson_type: str
+
+class UsageIncrementRequest(BaseModel):
+    student_id: str
+    lesson_type: str
     query: Optional[str] = None
 
 class QuickAnswerRequest(BaseModel):
@@ -142,6 +163,67 @@ async def mcp_call(request: MCPCallRequest):
         return get_educational_videos(params["subject"], params["grade"])
     else:
         return {"error": f"Unknown tool: {tool_name}"}
+
+# ═══════════════════════════════════════════════════════════════════════════
+# CHAT HISTORY & USAGE TRACKING
+# ═══════════════════════════════════════════════════════════════════════════
+
+@app.post("/api/save-chat")
+async def save_chat(request: SaveChatRequest):
+    """Save a chat to history"""
+    try:
+        chat_id = db.save_chat(
+            request.student_id,
+            request.topic,
+            request.grade_level,
+            request.subject,
+            request.request_data,
+            request.response_preview,
+            request.response_content or request.response_preview
+        )
+        return {
+            "success": True,
+            "chat_id": chat_id,
+            "message": "Chat saved to history"
+        }
+    except Exception as e:
+        print(f"[ERROR] Failed to save chat: {e}")
+        return {"success": False, "error": str(e)}
+
+@app.post("/api/chat-history")
+async def get_chat_history(request: ChatHistoryRequest):
+    """Get last 7 chats for a student"""
+    try:
+        chats = db.get_last_7_chats(request.student_id)
+        return {
+            "student_id": request.student_id,
+            "chats": chats,
+            "count": len(chats),
+            "success": True
+        }
+    except Exception as e:
+        print(f"[ERROR] Failed to get chat history: {e}")
+        return {"success": False, "error": str(e)}
+
+@app.post("/api/check-usage")
+async def check_usage(request: UsageCheckRequest):
+    """Check daily usage for a lesson type"""
+    try:
+        result = db.check_usage(request.student_id, request.lesson_type)
+        return result
+    except Exception as e:
+        print(f"[ERROR] Failed to check usage: {e}")
+        return {"usage_count": 0, "limit": 50, "remaining": 50, "exceeded": False}
+
+@app.post("/api/increment-usage")
+async def increment_usage(request: UsageIncrementRequest):
+    """Increment usage count for today"""
+    try:
+        result = db.increment_usage(request.student_id, request.lesson_type)
+        return result
+    except Exception as e:
+        print(f"[ERROR] Failed to increment usage: {e}")
+        return {"usage_count": 0, "limit": 50, "remaining": 50, "exceeded": False}
 
 # ═══════════════════════════════════════════════════════════════════════════
 # SERVE FRONTEND
