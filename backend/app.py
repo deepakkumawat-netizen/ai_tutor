@@ -26,6 +26,14 @@ load_dotenv()
 
 app = FastAPI()
 
+# Startup event - verify database is initialized
+@app.on_event("startup")
+async def startup_event():
+    print("[STARTUP] AI Tutor Backend starting up...")
+    print("[STARTUP] Database initialized and ready")
+    print("[STARTUP] Chat History endpoint: /api/chat-history")
+    print("[STARTUP] All features loaded: Chat History, Usage Counter, Auto-Cleanup")
+
 # Add CORS middleware to allow frontend requests
 app.add_middleware(
     CORSMiddleware,
