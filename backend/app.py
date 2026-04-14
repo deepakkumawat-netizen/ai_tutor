@@ -29,10 +29,16 @@ app = FastAPI()
 # Startup event - verify database is initialized
 @app.on_event("startup")
 async def startup_event():
-    print("[STARTUP] AI Tutor Backend starting up...")
-    print("[STARTUP] Database initialized and ready")
-    print("[STARTUP] Chat History endpoint: /api/chat-history")
-    print("[STARTUP] All features loaded: Chat History, Usage Counter, Auto-Cleanup")
+    print("\n" + "="*60)
+    print("[✓ STARTUP] AI Tutor Backend v2.0 - Full Features Ready")
+    print("="*60)
+    print("[✓] Database: Initialized")
+    print("[✓] Chat History: /api/chat-history (POST)")
+    print("[✓] Check Usage: /api/check-usage (POST)")
+    print("[✓] Increment Usage: /api/increment-usage (POST)")
+    print("[✓] Save Chat: /api/save-chat (POST)")
+    print("[✓] Features: Chat History, Usage Counter, Auto-Cleanup")
+    print("="*60 + "\n")
 
 # Add CORS middleware to allow frontend requests
 app.add_middleware(
