@@ -16,7 +16,20 @@ from pathlib import Path
 from typing import Optional
 from pydantic import BaseModel
 from mcp_server import get_topics, explain_topic, practice_question, get_educational_videos, quick_answer, TOOLS
-from database import db
+
+# Import database with explicit error handling
+try:
+    from database import db
+    DB_IMPORT_SUCCESS = True
+    DB_IMPORT_ERROR = None
+except Exception as e:
+    DB_IMPORT_SUCCESS = False
+    DB_IMPORT_ERROR = str(e)
+    print(f"[✗] CRITICAL: Failed to import database module: {e}")
+    # Create a dummy db object to prevent crashes
+    class DummyDB:
+        db_path = "ERROR: DATABASE IMPORT FAILED"
+    db = DummyDB()
 
 # Fix Unicode encoding on Windows
 if sys.platform == "win32":
@@ -32,18 +45,22 @@ async def startup_event():
     print("\n" + "="*60)
     print("[✓ STARTUP] AI Tutor Backend v2.0 - Full Features Ready")
     print("="*60)
-    try:
+
+    if not DB_IMPORT_SUCCESS:
+        print(f"[✗] DATABASE IMPORT FAILED: {DB_IMPORT_ERROR}")
+        print("[✗] The following endpoints may not work:")
+        print("[✗]   - /api/chat-history")
+        print("[✗]   - /api/check-usage")
+        print("[✗]   - /api/increment-usage")
+        print("[✗]   - /api/save-chat")
+    else:
         print(f"[✓] Database Path: {db.db_path}")
-        print(f"[✓] Database Connected: {db is not None}")
         print("[✓] Chat History: /api/chat-history (POST)")
         print("[✓] Check Usage: /api/check-usage (POST)")
         print("[✓] Increment Usage: /api/increment-usage (POST)")
         print("[✓] Save Chat: /api/save-chat (POST)")
         print("[✓] Features: Chat History, Usage Counter, Auto-Cleanup")
-        print("[✓] All systems operational")
-    except Exception as e:
-        print(f"[✗] ERROR during startup: {e}")
-        print(f"[✗] Database import failed: {type(e).__name__}")
+
     print("="*60 + "\n")
 
 # Add CORS middleware to allow frontend requests
@@ -92,12 +109,15 @@ async def health_check():
                 "path": route.path,
                 "methods": list(route.methods) if route.methods else ["GET"]
             })
+
     return {
-        "status": "healthy",
+        "status": "healthy" if DB_IMPORT_SUCCESS else "degraded",
+        "database_import": "success" if DB_IMPORT_SUCCESS else "failed",
+        "database_error": DB_IMPORT_ERROR,
         "database": db is not None,
         "db_path": db.db_path if db else "not initialized",
         "total_routes": len(routes),
-        "routes": routes
+        "routes": sorted(routes, key=lambda x: x['path'])
     }
 
 # ═══════════════════════════════════════════════════════════════════════════
