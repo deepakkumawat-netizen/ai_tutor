@@ -263,5 +263,6 @@ async def serve_frontend(full_path: str):
 
 if __name__ == "__main__":
     import uvicorn
-    print(f"[*] AI Tutor running on http://localhost:{PORT}")
+    print(f"[*] AI Tutor Backend running on http://localhost:{PORT}")
+    print("[*] Features: Chat History, Usage Counter, Auto-Cleanup")
     uvicorn.run(app, host="0.0.0.0", port=PORT)
