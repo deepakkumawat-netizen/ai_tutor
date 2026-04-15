@@ -11,7 +11,7 @@ const CARD_BG = "#e8f3ff";
 const BORDER = "#399aff";
 // Backend API - use localhost for dev, current origin for production (Render)
 const API = window.location.hostname === 'localhost'
-  ? 'http://localhost:5000'
+  ? 'http://localhost:5001'
   : window.location.origin;
 
 const ALL_SUBJECTS = Object.entries(SUBJECTS).map(([id, sub]) => ({ id, ...sub }));

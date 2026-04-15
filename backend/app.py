@@ -8,7 +8,11 @@ AI Tutor Backend + MCP Server
 import os
 import sys
 from dotenv import load_dotenv
-from fastapi import FastAPI
+
+# Load environment variables FIRST before importing NLP engine
+load_dotenv()
+
+from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,6 +20,7 @@ from pathlib import Path
 from typing import Optional
 from pydantic import BaseModel
 from mcp_server import get_topics, explain_topic, practice_question, get_educational_videos, quick_answer, TOOLS
+from nlp_engine import nlp_engine
 
 # Import database with explicit error handling
 try:
@@ -35,15 +40,14 @@ except Exception as e:
 if sys.platform == "win32":
     sys.stdout.reconfigure(encoding='utf-8')
 
-load_dotenv()
-
 app = FastAPI()
 
 # Startup event - verify database is initialized
 @app.on_event("startup")
 async def startup_event():
+    import time
     print("\n" + "="*60)
-    print("[✓ STARTUP] AI Tutor Backend v2.0 - Full Features Ready")
+    print(f"[✓ STARTUP] AI Tutor Backend v2.0 - {time.time()}")
     print("="*60)
 
     if not DB_IMPORT_SUCCESS:
@@ -288,6 +292,90 @@ async def increment_usage(request: UsageIncrementRequest):
         return {"usage_count": 0, "limit": 50, "remaining": 50, "exceeded": False}
 
 # ═══════════════════════════════════════════════════════════════════════════
+# NLP ANALYSIS ENDPOINTS
+# ═══════════════════════════════════════════════════════════════════════════
+
+class NLPAnalysisRequest(BaseModel):
+    question: str
+    context: str = ""
+    grade_level: str = "6"
+
+class NLPIntentRequest(BaseModel):
+    text: str
+
+class NLPSentimentRequest(BaseModel):
+    text: str
+
+class NLPTopicRequest(BaseModel):
+    text: str
+
+@app.post("/api/nlp/analyze")
+async def analyze_question(request: NLPAnalysisRequest):
+    """Comprehensive NLP analysis of student question"""
+    try:
+        analysis = nlp_engine.analyze_question(request.question, request.context)
+        return {"success": True, "analysis": analysis}
+    except Exception as e:
+        print(f"[ERROR] NLP Analysis failed: {e}")
+        return {"success": False, "error": str(e), "analysis": None}
+
+@app.post("/api/nlp/intent")
+async def detect_intent(request: NLPIntentRequest):
+    """Detect intent from text (explain, debug, practice, etc)"""
+    try:
+        intent = nlp_engine.detect_intent(request.text)
+        return {"success": True, "intent": intent}
+    except Exception as e:
+        print(f"[ERROR] Intent detection failed: {e}")
+        return {"success": False, "error": str(e), "intent": None}
+
+@app.post("/api/nlp/sentiment")
+async def analyze_sentiment(request: NLPSentimentRequest):
+    """Analyze emotional state (frustration, confusion, confidence)"""
+    try:
+        sentiment = nlp_engine.analyze_sentiment(request.text)
+        return {"success": True, "sentiment": sentiment}
+    except Exception as e:
+        print(f"[ERROR] Sentiment analysis failed: {e}")
+        return {"success": False, "error": str(e), "sentiment": None}
+
+@app.post("/api/nlp/topics")
+async def extract_topics(request: NLPTopicRequest):
+    """Extract programming topics from text"""
+    try:
+        topics = nlp_engine.extract_topics(request.text)
+        return {"success": True, "topics": topics}
+    except Exception as e:
+        print(f"[ERROR] Topic extraction failed: {e}")
+        return {"success": False, "error": str(e), "topics": []}
+
+@app.post("/api/nlp/classify")
+async def classify_question(request: NLPAnalysisRequest):
+    """Classify question and get teaching strategy"""
+    try:
+        strategy = nlp_engine.classify_question_type(request.question)
+        return {"success": True, "strategy": strategy}
+    except Exception as e:
+        print(f"[ERROR] Question classification failed: {e}")
+        return {"success": False, "error": str(e), "strategy": None}
+
+@app.post("/api/nlp/adaptive-response")
+async def generate_adaptive_response(request: NLPAnalysisRequest):
+    """Generate adaptive response with NLP insights"""
+    try:
+        # In real usage, base_response would come from the AI
+        # For now, we'll just return the analysis
+        adaptive = nlp_engine.generate_adaptive_response(
+            request.question,
+            "Base response from AI model",
+            request.grade_level
+        )
+        return {"success": True, "adaptive": adaptive}
+    except Exception as e:
+        print(f"[ERROR] Adaptive response generation failed: {e}")
+        return {"success": False, "error": str(e), "adaptive": None}
+
+# ═══════════════════════════════════════════════════════════════════════════
 # SERVE FRONTEND
 # ═══════════════════════════════════════════════════════════════════════════
 
@@ -303,9 +391,12 @@ async def root():
         return FileResponse(index_file)
     return {"message": "Frontend not built"}
 
-@app.get("/{full_path:path}")
+@app.get("/{full_path:path}", include_in_schema=False)
 async def serve_frontend(full_path: str):
-    # Block API routes from being caught by the catch-all (they should be handled by @app.post above)
+    # Only serve static files and fallback to index.html
+    # API and MCP routes are handled by specific endpoints above
+
+    # Don't serve /api/* or /mcp/* paths - let FastAPI handle them
     if full_path.startswith("api/") or full_path.startswith("mcp/"):
         return {"error": "Not found"}
 
@@ -313,6 +404,7 @@ async def serve_frontend(full_path: str):
     if file_path.exists():
         return FileResponse(file_path)
 
+    # Fallback to index.html for client-side routing
     index_file = FRONTEND_DIST / "index.html"
     if index_file.exists():
         return FileResponse(index_file)
