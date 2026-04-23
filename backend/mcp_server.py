@@ -394,7 +394,7 @@ Grade level: {grade}
 For younger grades (K-3): Use very simple words, short sentences.
 For older grades (7-12): You can use more technical language.
 
-Today's date: April 10, 2026. Use current and recent information."""},
+Today's date: {__import__('datetime').date.today().strftime('%B %d, %Y')}. Use current and recent information."""},
                 {"role": "user", "content": question}
             ],
             max_tokens=200,

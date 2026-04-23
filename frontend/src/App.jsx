@@ -2,12 +2,12 @@ import { useState, useRef, useEffect } from "react";
 import { GRADES, SUBJECTS, getCurriculumTopic, GRADE_TOPICS } from "./constants.js";
 import UsageCounter from "./UsageCounter";
 import ChatHistory from "./ChatHistory";
+import { ThemeToggle } from "./components/ThemeToggle";
 
 // ─── Inline styles / design tokens ───────────────────────────────────────────
 const FONT = "'Nunito', sans-serif";
 const BLUE = "#399aff";
 const DARK = "#ffffff";
-const CARD_BG = "#e8f3ff";
 const BORDER = "#399aff";
 // Backend API - use localhost for dev, current origin for production (Render)
 const API = window.location.hostname === 'localhost'
@@ -49,12 +49,13 @@ function Orbs() {
         @keyframes slideIn { from{opacity:0;transform:translateX(-16px)} to{opacity:1;transform:translateX(0)} }
         @keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.6;transform:scale(1.2)} }
         @keyframes slideDown { from{opacity:0;transform:translateY(-16px)} to{opacity:1;transform:translateY(0)} }
-        .subject-card:hover { transform:translateY(-4px) scale(1.02) !important; box-shadow:0 12px 40px rgba(57,154,255,0.2) !important; border-color:#399aff !important; background:#e8f3ff !important; }
+        .subject-card:hover { transform:translateY(-4px) scale(1.02) !important; box-shadow:0 12px 40px rgba(57,154,255,0.2) !important; border-color:var(--blue) !important; background:var(--bg-primary) !important; }
         .send-btn:hover:not(:disabled) { transform:scale(1.07); }
-        .chip-btn:hover { background:#e0f0ff !important; border-color:#399aff !important; }
-        pre { background:#0d1f35; border-radius:10px; padding:14px; overflow-x:auto; margin:8px 0; }
-        pre code { color:#93c5fd; font-family:'JetBrains Mono',monospace; font-size:13px; }
-        code { background:rgba(57,154,255,0.12); padding:2px 6px; border-radius:5px; font-family:'JetBrains Mono',monospace; font-size:13px; color:#1a7de8; }
+        .chip-btn:hover { background:var(--bg-tertiary) !important; border-color:var(--blue) !important; }
+        pre { background:var(--bg-secondary); border-radius:10px; padding:14px; overflow-x:auto; margin:8px 0; color:var(--text-primary); }
+        pre code { color:var(--blue); font-family:'JetBrains Mono',monospace; font-size:13px; }
+        code { background:rgba(57,154,255,0.12); padding:2px 6px; border-radius:5px; font-family:'JetBrains Mono',monospace; font-size:13px; color:var(--blue); }
+        :root.dark-mode code { background:rgba(6,182,212,0.2); }
       `}</style>
     </div>
   );
@@ -938,24 +939,24 @@ function GradeDropdown({ value, onChange }) {
         style={{
           width: "100%", padding: "11px 14px", borderRadius: 12,
           border: `1.5px solid ${open ? BLUE : BORDER}`,
-          background: open ? "rgba(57,154,255,0.08)" : "#e8f3ff",
-          color: "#0f172a", fontFamily: FONT, fontSize: 14,
+          background: open ? "var(--blue-xlight)" : "var(--bg-secondary)",
+          color: "var(--text-primary)", fontFamily: FONT, fontSize: 14,
           cursor: "pointer", textAlign: "left",
           display: "flex", alignItems: "center", justifyContent: "space-between",
           transition: "all 0.15s", outline: "none", boxSizing: "border-box",
         }}
       >
-        <span style={{ fontWeight: 600, color:"#0f172a" }}>{value || "Select Grade"}</span>
+        <span style={{ fontWeight: 600, color:"var(--text-primary)" }}>{value || "Select Grade"}</span>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
           stroke="#399aff" strokeWidth="2.5" strokeLinecap="round"
-          style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0 }}>
+          style={{ transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.2s", flexShrink: 0, color: "var(--text-primary)" }}>
           <polyline points="6 9 12 15 18 9"/>
         </svg>
       </button>
       {open && (
         <div style={{
           position: "absolute", top: "calc(100% + 6px)", left: 0, right: 0, zIndex: 999,
-          background: "#ffffff", border: `1.5px solid ${BORDER}`,
+          background: "var(--bg-secondary)", border: `1.5px solid ${BORDER}`,
           borderRadius: 14, boxShadow: "0 8px 32px rgba(57,154,255,0.18)",
           maxHeight: 300, overflowY: "auto", animation: "fadeIn 0.12s ease",
         }}>
@@ -966,7 +967,7 @@ function GradeDropdown({ value, onChange }) {
                 display: "block", width: "100%", padding: "11px 16px",
                 border: "none", borderLeft: `3px solid ${value === g ? BLUE : "transparent"}`,
                 background: value === g ? "rgba(57,154,255,0.1)" : "transparent",
-                color: value === g ? BLUE : "#334155",
+                color: value === g ? BLUE : "var(--text-secondary)",
                 fontFamily: FONT, fontSize: 13, fontWeight: value === g ? 700 : 500,
                 cursor: "pointer", textAlign: "left", transition: "background 0.1s",
               }}
@@ -992,7 +993,7 @@ function HomePage({ onStart }) {
 
   // Style definitions
   const lbl = { display:"block", fontSize:"13px", fontWeight:"600", color:BLUE, marginBottom:"8px" };
-  const inp = { width:"100%", padding:"10px 12px", fontSize:"14px", border:`1.5px solid ${BORDER}`, borderRadius:"10px", fontFamily:FONT, outline:"none", transition:"all 0.2s" };
+  const inp = { width:"100%", padding:"10px 12px", fontSize:"14px", border:`1.5px solid ${BORDER}`, borderRadius:"10px", fontFamily:FONT, outline:"none", transition:"all 0.2s", background:"var(--bg-secondary)", color:"var(--text-primary)" };
 
   const filteredSubjects = ALL_SUBJECTS.filter(s =>
     s.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -1019,8 +1020,13 @@ function HomePage({ onStart }) {
   };
 
   return (
-    <div style={{ height:"100vh", background:"#e8f3ff", fontFamily:FONT, position:"relative", overflowX:"hidden", overflowY:"auto" }}>
+    <div style={{ height:"100vh", background:"var(--bg-primary)", fontFamily:FONT, position:"relative", overflowX:"hidden", overflowY:"auto" }}>
       <Orbs />
+
+      {/* Theme Toggle - Fixed Top Right */}
+      <div style={{ position:"fixed", top:16, right:16, zIndex:1000 }}>
+        <ThemeToggle />
+      </div>
 
       <div style={{ position:"relative", zIndex:1, maxWidth:680, margin:"0 auto", padding:"40px 20px 60px" }}>
 
@@ -1030,16 +1036,16 @@ function HomePage({ onStart }) {
             <div style={{ width:7, height:7, borderRadius:"50%", background:BLUE, animation:"bounce 1.5s ease-in-out infinite" }}/>
             <span style={{ color:BLUE, fontSize:11, fontWeight:800, letterSpacing:"1.5px" }}>AI-POWERED LEARNING</span>
           </div>
-          <h1 style={{ color:"#0f172a", fontSize:"clamp(32px,6vw,52px)", fontWeight:900, letterSpacing:"-2px", lineHeight:1.1, margin:"0 0 12px" }}>
+          <h1 style={{ color:"var(--text-primary)", fontSize:"clamp(32px,6vw,52px)", fontWeight:900, letterSpacing:"-2px", lineHeight:1.1, margin:"0 0 12px" }}>
             Your Personal<br/><span style={{ color:BLUE }}>AI Tutor</span>
           </h1>
-          <p style={{ color:"#64748b", fontSize:15, fontWeight:500, margin:0 }}>
+          <p style={{ color:"var(--text-secondary)", fontSize:15, fontWeight:500, margin:0 }}>
             Any subject · Any grade · Learn at your own pace
           </p>
         </div>
 
         {/* Card */}
-        <div style={{ background:"#ffffff", backdropFilter:"blur(20px)", border:`1.5px solid ${BORDER}`, borderRadius:28, padding:"32px 28px", boxShadow:"0 24px 80px rgba(57,154,255,0.12)", animation:"fadeUp 0.7s ease 0.1s both" }}>
+        <div style={{ background:"var(--bg-secondary)", backdropFilter:"blur(20px)", border:`1.5px solid ${BORDER}`, borderRadius:28, padding:"32px 28px", boxShadow:"0 24px 80px rgba(57,154,255,0.12)", animation:"fadeUp 0.7s ease 0.1s both" }}>
 
           {/* Row 1: Age + Grade */}
           <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:20 }}>
@@ -1102,7 +1108,7 @@ function HomePage({ onStart }) {
                   borderRadius:16,
                   cursor:"pointer",
                   border: `1.5px solid ${BORDER}`,
-                  background: subject === s.id ? "rgba(57,154,255,0.25)" : CARD_BG,
+                  background: subject === s.id ? "var(--blue-xlight)" : "var(--bg-secondary)",
                   transition:"all 0.2s ease",
                   textAlign:"center",
                   fontSize: "inherit",
@@ -1110,7 +1116,7 @@ function HomePage({ onStart }) {
                 }}
               >
                 <div style={{ fontSize:22, marginBottom:6 }}>{s.icon || "📚"}</div>
-                <div style={{ color: "#334155", fontWeight:700, fontSize:12.5, lineHeight:1.3 }}>{s.label}</div>
+                <div style={{ color: "var(--text-primary)", fontWeight:700, fontSize:12.5, lineHeight:1.3 }}>{s.label}</div>
               </button>
             ))}
           </div>
@@ -1118,7 +1124,7 @@ function HomePage({ onStart }) {
           {/* Divider */}
           <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:16 }}>
             <div style={{ flex:1, height:1, background:BORDER }}/>
-            <span style={{ color:"#94a3b8", fontSize:12, fontWeight:600 }}>OR TYPE YOUR OWN</span>
+            <span style={{ color:"var(--text-secondary)", fontSize:12, fontWeight:600 }}>OR TYPE YOUR OWN</span>
             <div style={{ flex:1, height:1, background:BORDER }}/>
           </div>
 
@@ -1145,7 +1151,7 @@ function HomePage({ onStart }) {
                 }}
                 style={{
                   padding:"10px 16px", borderRadius:10, border:"none",
-                  background:BLUE, color:"white", fontWeight:600, cursor:"pointer",
+                  background:BLUE, color:"var(--text-primary)", fontWeight:600, cursor:"pointer",
                   transition:"all 0.2s"
                 }}
               >
@@ -1174,7 +1180,7 @@ function HomePage({ onStart }) {
         </div>
 
         {/* Footer */}
-        <p style={{ textAlign:"center", color:"#94a3b8", fontSize:11, fontWeight:600, marginTop:24, position:"relative", zIndex:1 }}>
+        <p style={{ textAlign:"center", color:"var(--text-secondary)", fontSize:11, fontWeight:600, marginTop:24, position:"relative", zIndex:1 }}>
           Free · Any subject · Any school board worldwide
         </p>
       </div>
@@ -1824,30 +1830,30 @@ function VideoPlayer({ profile }) {
 
   // ── Loading state ─────────────────────────────────────────────────────────
   if (phase === "loading") return (
-    <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:16, background:"#e8f3ff" }}>
+    <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:16, background:"var(--bg-primary)" }}>
       <div style={{ width:48, height:48, border:"4px solid rgba(57,154,255,0.15)", borderTopColor:BLUE, borderRadius:"50%", animation:"spin 0.85s linear infinite" }}/>
-      <div style={{ color:"#334155", fontWeight:700, fontSize:14 }}>Finding the best videos for {profile.topic}…</div>
-      <div style={{ color:"#64748b", fontSize:12 }}>{profile.grade} · {profile.subjectLabel}</div>
+      <div style={{ color:"var(--text-primary)", fontWeight:700, fontSize:14 }}>Finding the best videos for {profile.topic}…</div>
+      <div style={{ color:"var(--text-secondary)", fontSize:12 }}>{profile.grade} · {profile.subjectLabel}</div>
     </div>
   );
 
   // ── No API key state — show YouTube search redirect + narration ────────────
   if (phase === "no-api") return (
-    <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", background:"#e8f3ff" }}>
+    <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", background:"var(--bg-primary)" }}>
       <div style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", gap:16, padding:24 }}>
         <div style={{ fontSize:48 }}>🎬</div>
-        <div style={{ color:"#0f172a", fontWeight:900, fontSize:17, textAlign:"center" }}>Search for "{profile.topic}" videos</div>
-        <div style={{ color:"#64748b", fontSize:13, textAlign:"center", maxWidth:380 }}>
+        <div style={{ color:"var(--text-primary)", fontWeight:900, fontSize:17, textAlign:"center" }}>Search for "{profile.topic}" videos</div>
+        <div style={{ color:"var(--text-secondary)", fontSize:13, textAlign:"center", maxWidth:380 }}>
           Add your <strong style={{color:BLUE}}>YOUTUBE_API_KEY</strong> to your <code style={{background:"rgba(255,255,255,0.08)",padding:"2px 6px",borderRadius:4}}>.env</code> file to auto-load videos.<br/>
           Or click below to search on YouTube directly:
         </div>
         <a
           href={`https://www.youtube.com/results?search_query=${encodeURIComponent(profile.topic + " " + profile.subjectLabel + " " + profile.grade + " lesson tutorial")}`}
           target="_blank" rel="noopener noreferrer"
-          style={{ display:"flex", alignItems:"center", gap:8, padding:"12px 28px", borderRadius:12, background:"#FF0000", color:"white", fontFamily:FONT, fontWeight:900, fontSize:14, textDecoration:"none", boxShadow:"0 4px 20px rgba(255,0,0,0.35)" }}>
+          style={{ display:"flex", alignItems:"center", gap:8, padding:"12px 28px", borderRadius:12, background:"#FF0000", color:"var(--text-primary)", fontFamily:FONT, fontWeight:900, fontSize:14, textDecoration:"none", boxShadow:"0 4px 20px rgba(255,0,0,0.35)" }}>
           <span style={{fontSize:18}}>▶</span> Search on YouTube
         </a>
-        <button onClick={() => fetchVideos(query)} style={{ padding:"8px 20px", borderRadius:10, border:`1px solid ${BORDER}`, background:"#e8f3ff", color:"#334155", fontFamily:FONT, fontWeight:700, fontSize:12, cursor:"pointer" }}>
+        <button onClick={() => fetchVideos(query)} style={{ padding:"8px 20px", borderRadius:10, border:`1px solid ${BORDER}`, background:"var(--bg-tertiary)", color:"var(--text-primary)", fontFamily:FONT, fontWeight:700, fontSize:12, cursor:"pointer" }}>
           🔄 Try Again
         </button>
       </div>
@@ -1855,21 +1861,21 @@ function VideoPlayer({ profile }) {
   );
 
   return (
-    <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", background:"#e8f3ff" }}>
+    <div style={{ flex:1, display:"flex", flexDirection:"column", overflow:"hidden", background:"var(--bg-primary)" }}>
 
       {/* ── TOP SEARCH BAR — compact ── */}
-      <div style={{ padding:"7px 12px", borderBottom:`1px solid ${BORDER}`, display:"flex", gap:7, alignItems:"center", flexShrink:0, background:"#ffffff" }}>
+      <div style={{ padding:"7px 12px", borderBottom:`1px solid ${BORDER}`, display:"flex", gap:7, alignItems:"center", flexShrink:0, background:"var(--bg-secondary)" }}>
         <input
           value={query}
           onChange={e => setQuery(e.target.value)}
           onKeyDown={e => { if(e.key==="Enter") fetchVideos(query); }}
           placeholder="Search educational videos…"
-          style={{ flex:1, padding:"7px 12px", borderRadius:8, border:`1.5px solid ${BORDER}`, background:"#ffffff", color:"#0f172a", fontFamily:FONT, fontSize:12, outline:"none" }}
+          style={{ flex:1, padding:"7px 12px", borderRadius:8, border:`1.5px solid ${BORDER}`, background:"var(--bg-secondary)", color:"var(--text-primary)", fontFamily:FONT, fontSize:12, outline:"none" }}
         />
         <button
           onClick={() => fetchVideos(query)}
           disabled={searching}
-          style={{ padding:"7px 14px", borderRadius:8, border:"none", background: searching ? "rgba(57,154,255,0.3)" : `linear-gradient(135deg,#1a7de8,${BLUE})`, color:"white", fontFamily:FONT, fontWeight:800, fontSize:12, cursor: searching ? "not-allowed":"pointer", flexShrink:0, display:"flex", alignItems:"center", gap:6 }}>
+          style={{ padding:"7px 14px", borderRadius:8, border:"none", background: searching ? "rgba(57,154,255,0.3)" : `linear-gradient(135deg,#1a7de8,${BLUE})`, color:"var(--text-primary)", fontFamily:FONT, fontWeight:800, fontSize:12, cursor: searching ? "not-allowed":"pointer", flexShrink:0, display:"flex", alignItems:"center", gap:6 }}>
           {searching
             ? <><div style={{ width:12,height:12,border:"2px solid rgba(255,255,255,0.3)",borderTopColor:"white",borderRadius:"50%",animation:"spin 0.75s linear infinite" }}/> …</>
             : <>🔍 Search</>}
@@ -1908,7 +1914,7 @@ function VideoPlayer({ profile }) {
 
               {/* ── Video meta — single compact row ── */}
               <div style={{ padding:"8px 12px", background:"rgba(255,255,255,0.04)", borderRadius:10, border:"1px solid rgba(255,255,255,0.08)", marginBottom:8, flexShrink:0 }}>
-                <div style={{ color:"white", fontWeight:800, fontSize:13, lineHeight:1.35, marginBottom:4, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{activeVideo.title}</div>
+                <div style={{ color:"var(--text-primary)", fontWeight:800, fontSize:13, lineHeight:1.35, marginBottom:4, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{activeVideo.title}</div>
                 <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
                   <span style={{ color:BLUE, fontWeight:700, fontSize:11 }}>📺 {activeVideo.channel}</span>
                   {activeVideo.duration && <span style={{ color:"rgba(255,255,255,0.35)", fontSize:11, fontWeight:600 }}>⏱ {activeVideo.duration}</span>}
@@ -1951,7 +1957,7 @@ function VideoPlayer({ profile }) {
                   onError={e => { e.target.style.display="none"; }}
                 />
                 {v.duration && (
-                  <div style={{ position:"absolute", bottom:2, right:2, background:"rgba(0,0,0,0.88)", color:"white", fontSize:8.5, fontWeight:800, padding:"1px 4px", borderRadius:3 }}>
+                  <div style={{ position:"absolute", bottom:2, right:2, background:"rgba(0,0,0,0.88)", color:"var(--text-primary)", fontSize:8.5, fontWeight:800, padding:"1px 4px", borderRadius:3 }}>
                     {v.duration}
                   </div>
                 )}
@@ -2865,12 +2871,12 @@ function SubjectPage({ profile, onHome }) {
 
   // Return the redesigned student-friendly interface
   return (
-    <div style={{ position:"relative", height:"100vh", display:"flex", flexDirection:"column", background:"linear-gradient(135deg, #e0f2ff 0%, #f0e8ff 100%)" }}>
+    <div style={{ position:"relative", height:"100vh", display:"flex", flexDirection:"column", background:"var(--bg-primary)" }}>
       {/* Header - Colorful and engaging */}
       <div style={{
         padding:"16px 20px",
         background:`linear-gradient(135deg, ${BLUE} 0%, #5b9cff 100%)`,
-        color:"white",
+        color:"var(--text-primary)",
         display:"flex",
         justifyContent:"space-between",
         alignItems:"center",
@@ -2941,7 +2947,7 @@ function SubjectPage({ profile, onHome }) {
               display:"flex",
               alignItems:"center",
               justifyContent:"center",
-              color:"white",
+              color:"var(--text-primary)",
               fontWeight:"600"
             }}
             title="Chat history"
@@ -3020,7 +3026,7 @@ function SubjectPage({ profile, onHome }) {
               top:60,
               width:280,
               height:"calc(100vh - 60px)",
-              background:"white",
+              background:"var(--bg-primary)",
               boxShadow:"2px 0 12px rgba(0,0,0,0.15)",
               overflowY:"auto",
               zIndex:1000,
@@ -3047,7 +3053,9 @@ function SubjectPage({ profile, onHome }) {
                   fontWeight:"500",
                   outline:"none",
                   transition:"all 0.2s",
-                  boxSizing:"border-box"
+                  boxSizing:"border-box",
+                  background:"var(--bg-secondary)",
+                  color:"var(--text-primary)"
                 }}
                 onFocus={(e) => {
                   e.target.style.borderColor = BLUE;
@@ -3068,7 +3076,7 @@ function SubjectPage({ profile, onHome }) {
                     border:"none",
                     cursor:"pointer",
                     fontSize:"14px",
-                    color:"#999"
+                    color:"var(--text-secondary)"
                   }}
                 >
                   ✕
@@ -3076,7 +3084,7 @@ function SubjectPage({ profile, onHome }) {
               )}
             </div>
 
-            <div style={{ fontSize:"12px", fontWeight:"600", color:"#999", marginBottom:"12px", textTransform:"uppercase", letterSpacing:"0.5px" }}>
+            <div style={{ fontSize:"12px", fontWeight:"600", color:"var(--text-secondary)", marginBottom:"12px", textTransform:"uppercase", letterSpacing:"0.5px" }}>
               Subjects
             </div>
 
@@ -3098,25 +3106,25 @@ function SubjectPage({ profile, onHome }) {
                   style={{
                     padding:"14px 12px",
                     borderRadius:"12px",
-                    border:activeSubject === subject.id ? `2px solid ${BLUE}` : `1px solid #e0e8f3`,
-                    background:activeSubject === subject.id ? "rgba(57,154,255,0.1)" : "white",
+                    border:activeSubject === subject.id ? `2px solid ${BLUE}` : `1px solid var(--border-color)`,
+                    background:activeSubject === subject.id ? "var(--blue-xlight)" : "var(--bg-secondary)",
                     cursor:"pointer",
                     transition:"all 0.2s",
                     display:"flex",
                     gap:"10px",
                     alignItems:"center",
                     fontWeight:"600",
-                    color:"#333"
+                    color:"var(--text-primary)"
                   }}
                   onMouseEnter={(e) => {
                     if (activeSubject !== subject.id) {
-                      e.target.style.background = "#f5f5f5";
+                      e.target.style.background = "var(--bg-tertiary)";
                       e.target.style.transform = "translateX(4px)";
                     }
                   }}
                   onMouseLeave={(e) => {
                     if (activeSubject !== subject.id) {
-                      e.target.style.background = "white";
+                      e.target.style.background = "var(--bg-secondary)";
                       e.target.style.transform = "translateX(0)";
                     }
                   }}
@@ -3154,7 +3162,9 @@ function SubjectPage({ profile, onHome }) {
                 outline:"none",
                 transition:"all 0.2s",
                 boxSizing:"border-box",
-                paddingRight:"100px"
+                paddingRight:"100px",
+                background:"var(--bg-secondary)",
+                color:"var(--text-primary)"
               }}
               onFocus={(e) => {
                 e.target.style.borderColor = BLUE;
@@ -3198,7 +3208,7 @@ function SubjectPage({ profile, onHome }) {
                     padding:"8px 10px",
                     fontSize:"16px",
                     transition:"all 0.2s",
-                    color:"white",
+                    color:"var(--text-primary)",
                     fontWeight:"600",
                     minWidth:"40px",
                     display:"flex",
@@ -3223,7 +3233,7 @@ function SubjectPage({ profile, onHome }) {
                   fontSize:"14px",
                   fontWeight:"600",
                   transition:"all 0.2s",
-                  color:"white",
+                  color:"var(--text-primary)",
                   minWidth:"44px",
                   height:"44px",
                   display:"flex",
@@ -3256,7 +3266,7 @@ function SubjectPage({ profile, onHome }) {
                     border:"none",
                     cursor:"pointer",
                     fontSize:"16px",
-                    color:"#999",
+                    color:"var(--text-secondary)",
                     padding:"4px 6px",
                     transition:"all 0.2s"
                   }}
@@ -3276,7 +3286,7 @@ function SubjectPage({ profile, onHome }) {
               maxHeight:"300px",
               overflowY:"auto",
               padding:"12px",
-              background:"white",
+              background:"var(--bg-secondary)",
               border:`1.5px solid ${BORDER}`,
               borderRadius:"12px",
               marginTop:"0px"
@@ -3287,24 +3297,24 @@ function SubjectPage({ profile, onHome }) {
                   onClick={() => chooseTopic(topic)}
                   style={{
                     padding:"12px 10px",
-                    background:"white",
+                    background:"var(--bg-secondary)",
                     border:`1px solid ${BORDER}`,
                     borderRadius:"10px",
                     cursor:"pointer",
                     fontSize:"13px",
                     fontWeight:"600",
-                    color:"#333",
+                    color:"var(--text-primary)",
                     transition:"all 0.2s",
                     textAlign:"center",
                     lineHeight:"1.4"
                   }}
                   onMouseEnter={(e) => {
-                    e.target.style.background = CARD_BG;
+                    e.target.style.background = "var(--bg-tertiary)";
                     e.target.style.transform = "translateY(-2px)";
                     e.target.style.boxShadow = "0 4px 12px rgba(57,154,255,0.2)";
                   }}
                   onMouseLeave={(e) => {
-                    e.target.style.background = "white";
+                    e.target.style.background = "var(--bg-secondary)";
                     e.target.style.transform = "translateY(0)";
                     e.target.style.boxShadow = "none";
                   }}
@@ -3324,7 +3334,7 @@ function SubjectPage({ profile, onHome }) {
               maxHeight:"250px",
               overflowY:"auto",
               padding:"12px",
-              background:"white",
+              background:"var(--bg-secondary)",
               border:`1.5px solid ${BORDER}`,
               borderRadius:"12px",
               marginTop:"12px"
@@ -3335,24 +3345,24 @@ function SubjectPage({ profile, onHome }) {
                   onClick={() => chooseTopic(topic)}
                   style={{
                     padding:"12px 10px",
-                    background:"white",
+                    background:"var(--bg-secondary)",
                     border:`1px solid ${BORDER}`,
                     borderRadius:"10px",
                     cursor:"pointer",
                     fontSize:"13px",
                     fontWeight:"600",
-                    color:"#333",
+                    color:"var(--text-primary)",
                     transition:"all 0.2s",
                     textAlign:"center",
                     lineHeight:"1.4"
                   }}
                   onMouseEnter={(e) => {
-                    e.target.style.background = CARD_BG;
+                    e.target.style.background = "var(--bg-tertiary)";
                     e.target.style.transform = "translateY(-2px)";
                     e.target.style.boxShadow = "0 4px 12px rgba(57,154,255,0.2)";
                   }}
                   onMouseLeave={(e) => {
-                    e.target.style.background = "white";
+                    e.target.style.background = "var(--bg-secondary)";
                     e.target.style.transform = "translateY(0)";
                     e.target.style.boxShadow = "none";
                   }}
@@ -3369,7 +3379,7 @@ function SubjectPage({ profile, onHome }) {
       {activeTopic && (
         <div style={{
           padding:"16px 20px",
-          background:"white",
+          background:"var(--bg-secondary)",
           borderBottom:`2px solid ${BLUE}`,
           display:"flex",
           justifyContent:"space-between",
@@ -3378,7 +3388,7 @@ function SubjectPage({ profile, onHome }) {
           gap:"12px"
         }}>
           <div>
-            <div style={{ fontSize:"14px", color:"#666" }}>Currently Learning:</div>
+            <div style={{ fontSize:"14px", color:"var(--text-secondary)" }}>Currently Learning:</div>
             <div style={{ fontSize:"20px", fontWeight:"700", color:BLUE, marginTop:"4px" }}>
               {activeTopic}
             </div>
@@ -3386,13 +3396,13 @@ function SubjectPage({ profile, onHome }) {
 
           <div style={{ display:"flex", gap:"8px", alignItems:"center" }}>
             {/* View Toggle Buttons */}
-            <div style={{ display:"flex", gap:"4px", background:"#f0f4f8", padding:"4px", borderRadius:"8px" }}>
+            <div style={{ display:"flex", gap:"4px", background:"var(--bg-tertiary)", padding:"4px", borderRadius:"8px" }}>
               <button
                 onClick={() => { setViewMode("lesson"); }}
                 style={{
                   padding:"8px 14px",
                   background:viewMode === "lesson" ? BLUE : "transparent",
-                  color:viewMode === "lesson" ? "white" : "#666",
+                  color:viewMode === "lesson" ? "white" : "var(--text-secondary)",
                   border:"none",
                   borderRadius:"6px",
                   cursor:"pointer",
@@ -3411,7 +3421,7 @@ function SubjectPage({ profile, onHome }) {
                 style={{
                   padding:"8px 14px",
                   background:viewMode === "videos" ? BLUE : "transparent",
-                  color:viewMode === "videos" ? "white" : "#666",
+                  color:viewMode === "videos" ? "white" : "var(--text-secondary)",
                   border:"none",
                   borderRadius:"6px",
                   cursor:"pointer",
@@ -3429,8 +3439,8 @@ function SubjectPage({ profile, onHome }) {
               onClick={() => { setActiveTopic(null); setShowTopicMenu(true); setMessages([]); setViewMode("lesson"); }}
               style={{
                 padding:"8px 14px",
-                background:CARD_BG,
-                border:`2px solid ${BORDER}`,
+                background:"var(--bg-tertiary)",
+                border:`2px solid ${BLUE}`,
                 borderRadius:"8px",
                 cursor:"pointer",
                 color:BLUE,
@@ -3440,6 +3450,9 @@ function SubjectPage({ profile, onHome }) {
             >
               Change Topic
             </button>
+
+            {/* Theme Toggle Button */}
+            <ThemeToggle />
           </div>
         </div>
       )}
@@ -3453,7 +3466,8 @@ function SubjectPage({ profile, onHome }) {
           padding:"20px",
           display:"flex",
           flexDirection:"column",
-          gap:"16px"
+          gap:"16px",
+          background:"var(--bg-primary)"
         }}
       >
         {/* Videos View */}
@@ -3476,7 +3490,7 @@ function SubjectPage({ profile, onHome }) {
                 borderTop:`4px solid transparent`,
                 animation:"spin 1s linear infinite"
               }}/>
-              <div style={{ fontSize:"16px", fontWeight:"600", color:"#333" }}>Loading videos...</div>
+              <div style={{ fontSize:"16px", fontWeight:"600", color:"var(--text-primary)" }}>Loading videos...</div>
             </div>
           ) : videoList.length > 0 ? (
             <div style={{
@@ -3492,7 +3506,7 @@ function SubjectPage({ profile, onHome }) {
                     display:"block",
                     borderRadius:"12px",
                     overflow:"hidden",
-                    background:"white",
+                    background:"var(--bg-secondary)",
                     boxShadow:"0 2px 8px rgba(0,0,0,0.1)",
                     transition:"all 0.3s",
                     textDecoration:"none",
@@ -3556,7 +3570,7 @@ function SubjectPage({ profile, onHome }) {
                     <div style={{
                       fontSize:"14px",
                       fontWeight:"600",
-                      color:"#333",
+                      color:"var(--text-primary)",
                       lineHeight:"1.4",
                       marginBottom:"6px",
                       display:"-webkit-box",
@@ -3568,7 +3582,7 @@ function SubjectPage({ profile, onHome }) {
                     </div>
                     <div style={{
                       fontSize:"12px",
-                      color:"#999",
+                      color:"var(--text-secondary)",
                       overflow:"hidden",
                       textOverflow:"ellipsis",
                       whiteSpace:"nowrap"
@@ -3587,7 +3601,7 @@ function SubjectPage({ profile, onHome }) {
               justifyContent:"center",
               height:"100%",
               textAlign:"center",
-              color:"#666"
+              color:"var(--text-secondary)"
             }}>
               <div style={{ fontSize:"48px", marginBottom:"12px" }}>🎬</div>
               <div style={{ fontSize:"18px", fontWeight:"600", marginBottom:"8px" }}>No Videos Found</div>
@@ -3609,7 +3623,7 @@ function SubjectPage({ profile, onHome }) {
             padding:"20px"
           }} onClick={() => setSelectedVideo(null)}>
             <div style={{
-              background:"white",
+              background:"var(--bg-secondary)",
               borderRadius:"16px",
               width:"100%",
               maxWidth:"900px",
@@ -3646,14 +3660,14 @@ function SubjectPage({ profile, onHome }) {
                 flex:1,
                 overflow:"auto"
               }}>
-                <h2 style={{ margin:"0 0 10px 0", fontSize:"20px", fontWeight:"700", color:"#0f172a" }}>
+                <h2 style={{ margin:"0 0 10px 0", fontSize:"20px", fontWeight:"700", color:"var(--text-primary)" }}>
                   {selectedVideo.title}
                 </h2>
-                <p style={{ margin:"0 0 10px 0", fontSize:"13px", color:"#64748b" }}>
+                <p style={{ margin:"0 0 10px 0", fontSize:"13px", color:"var(--text-secondary)" }}>
                   📺 {selectedVideo.channel}
                 </p>
                 {selectedVideo.description && (
-                  <p style={{ margin:"0 0 15px 0", fontSize:"13px", color:"#475569", lineHeight:"1.6" }}>
+                  <p style={{ margin:"0 0 15px 0", fontSize:"13px", color:"var(--text-secondary)", lineHeight:"1.6" }}>
                     {selectedVideo.description}
                   </p>
                 )}
@@ -3665,7 +3679,7 @@ function SubjectPage({ profile, onHome }) {
                     display:"inline-block",
                     padding:"8px 16px",
                     background:BLUE,
-                    color:"white",
+                    color:"var(--text-primary)",
                     borderRadius:"8px",
                     textDecoration:"none",
                     fontSize:"13px",
@@ -3687,7 +3701,7 @@ function SubjectPage({ profile, onHome }) {
                   borderRadius:"50%",
                   border:"none",
                   background:"rgba(0,0,0,0.5)",
-                  color:"white",
+                  color:"var(--text-primary)",
                   fontSize:"20px",
                   cursor:"pointer",
                   fontWeight:"700",
@@ -3711,7 +3725,7 @@ function SubjectPage({ profile, onHome }) {
                 justifyContent:"center",
                 height:"100%",
                 textAlign:"center",
-                color:"#666"
+                color:"var(--text-secondary)"
               }}>
                 <div style={{ fontSize:"48px", marginBottom:"12px" }}>🎓</div>
                 <div style={{ fontSize:"18px", fontWeight:"600", marginBottom:"8px" }}>Ready to Learn!</div>
@@ -3775,7 +3789,7 @@ function SubjectPage({ profile, onHome }) {
                   padding:"14px 18px",
                   borderRadius:"20px 20px 4px 20px",
                   background:BLUE,
-                  color:"white",
+                  color:"var(--text-primary)",
                   fontSize:"15px",
                   lineHeight:"1.6",
                   fontWeight:"500",
@@ -3790,7 +3804,7 @@ function SubjectPage({ profile, onHome }) {
               <div
                 style={{
                   maxWidth:"85%",
-                  background:"white",
+                  background:"var(--bg-secondary)",
                   borderRadius:"20px 20px 20px 4px",
                   boxShadow:"0 2px 8px rgba(0,0,0,0.1)",
                   overflow:"hidden"
@@ -3806,10 +3820,10 @@ function SubjectPage({ profile, onHome }) {
                     {/* Definition Section */}
                     {msg.sections.definition && (
                       <div style={{ marginBottom:"16px" }}>
-                        <div style={{ fontSize:"14px", fontWeight:"700", color:"#333", marginBottom:"6px" }}>
+                        <div style={{ fontSize:"14px", fontWeight:"700", color:"var(--text-primary)", marginBottom:"6px" }}>
                           📖 What is it?
                         </div>
-                        <div style={{ fontSize:"14px", lineHeight:"1.6", color:"#555", paddingLeft:"16px", borderLeft:`3px solid ${BLUE}`, ...getMessageStyles() }}>
+                        <div style={{ fontSize:"14px", lineHeight:"1.6", color:"var(--text-primary)", paddingLeft:"16px", borderLeft:`3px solid ${BLUE}`, ...getMessageStyles() }}>
                           {formatSectionForGrade(msg.sections.definition)}
                         </div>
                       </div>
@@ -3818,10 +3832,10 @@ function SubjectPage({ profile, onHome }) {
                     {/* Key Concepts Section */}
                     {msg.sections.keyPoints && (
                       <div style={{ marginBottom:"16px" }}>
-                        <div style={{ fontSize:"14px", fontWeight:"700", color:"#333", marginBottom:"8px" }}>
+                        <div style={{ fontSize:"14px", fontWeight:"700", color:"var(--text-primary)", marginBottom:"8px" }}>
                           💡 Key Ideas
                         </div>
-                        <div style={{ fontSize:"14px", lineHeight:"1.7", color:"#555", paddingLeft:"16px", borderLeft:`3px solid ${BLUE}`, ...getMessageStyles() }}>
+                        <div style={{ fontSize:"14px", lineHeight:"1.7", color:"var(--text-primary)", paddingLeft:"16px", borderLeft:`3px solid ${BLUE}`, ...getMessageStyles() }}>
                           {formatSectionForGrade(msg.sections.keyPoints).split("\n").map((line, idx) => (
                             <div key={idx} style={{ marginBottom: idx === formatSectionForGrade(msg.sections.keyPoints).split("\n").length - 1 ? 0 : "6px" }}>
                               {line}
@@ -3834,10 +3848,10 @@ function SubjectPage({ profile, onHome }) {
                     {/* Real-World Example Section */}
                     {msg.sections.example && (
                       <div style={{ marginBottom:"16px" }}>
-                        <div style={{ fontSize:"14px", fontWeight:"700", color:"#333", marginBottom:"6px" }}>
+                        <div style={{ fontSize:"14px", fontWeight:"700", color:"var(--text-primary)", marginBottom:"6px" }}>
                           🌍 Real-World Example
                         </div>
-                        <div style={{ fontSize:"14px", lineHeight:"1.6", color:"#555", paddingLeft:"16px", borderLeft:`3px solid ${BLUE}`, background:"rgba(57,154,255,0.05)", padding:"12px", borderRadius:"6px", ...getMessageStyles() }}>
+                        <div style={{ fontSize:"14px", lineHeight:"1.6", color:"var(--text-primary)", paddingLeft:"16px", borderLeft:`3px solid ${BLUE}`, background:"rgba(57,154,255,0.05)", padding:"12px", borderRadius:"6px", ...getMessageStyles() }}>
                           {formatSectionForGrade(msg.sections.example)}
                         </div>
                       </div>
@@ -3846,7 +3860,7 @@ function SubjectPage({ profile, onHome }) {
                     {/* Summary Section */}
                     {msg.sections.summary && (
                       <div style={{ marginBottom:"16px" }}>
-                        <div style={{ fontSize:"14px", fontWeight:"700", color:"#333", marginBottom:"6px" }}>
+                        <div style={{ fontSize:"14px", fontWeight:"700", color:"var(--text-primary)", marginBottom:"6px" }}>
                           ✨ Remember This
                         </div>
                         <div style={{ fontSize:"14px", fontWeight:"600", lineHeight:"1.6", color:BLUE, paddingLeft:"16px", borderLeft:`3px solid ${BLUE}`, background:"rgba(57,154,255,0.08)", padding:"12px", borderRadius:"6px", ...getMessageStyles() }}>
@@ -3865,7 +3879,7 @@ function SubjectPage({ profile, onHome }) {
                           gap:"6px",
                           padding:"10px 16px",
                           background: voiceState === "speaking" ? "#d9534f" : BLUE,
-                          color:"white",
+                          color:"var(--text-primary)",
                           border:"none",
                           borderRadius:"8px",
                           cursor:"pointer",
@@ -3890,7 +3904,7 @@ function SubjectPage({ profile, onHome }) {
                   </div>
                 ) : (
                   // Fallback to plain text (for practice questions, etc.)
-                  <div style={{ padding:"14px 18px", color:"#333", fontSize:"15px", lineHeight:"1.6", ...getMessageStyles() }}>
+                  <div style={{ padding:"14px 18px", color:"var(--text-primary)", fontSize:"15px", lineHeight:"1.6", ...getMessageStyles() }}>
                     {formatContentForGrade(msg.content)}
                   </div>
                 )}
@@ -3931,7 +3945,7 @@ function SubjectPage({ profile, onHome }) {
       {activeTopic && (
         <div style={{
           padding:"16px 20px",
-          background:"white",
+          background:"var(--bg-secondary)",
           borderTop:"2px solid rgba(57,154,255,0.2)",
           display:"flex",
           gap:"12px",
@@ -3952,7 +3966,9 @@ function SubjectPage({ profile, onHome }) {
               fontFamily:FONT,
               fontWeight:"500",
               outline:"none",
-              transition:"all 0.2s"
+              transition:"all 0.2s",
+              background:"var(--bg-tertiary)",
+              color:"var(--text-primary)"
             }}
             onFocus={(e) => e.target.style.borderColor = BLUE}
             onBlur={(e) => e.target.style.borderColor = BORDER}
@@ -3964,7 +3980,7 @@ function SubjectPage({ profile, onHome }) {
             style={{
               padding:"10px 14px",
               background:voiceState === "listening" ? "#ef4444" : voiceState === "processing" ? "#3b82f6" : BLUE,
-              color:"white",
+              color:"var(--text-primary)",
               border:"none",
               borderRadius:"10px",
               cursor:"pointer",
@@ -3999,8 +4015,8 @@ function SubjectPage({ profile, onHome }) {
             disabled={loading || !input.trim()}
             style={{
               padding:"14px 28px",
-              background:loading || !input.trim() ? "#ccc" : BLUE,
-              color:"white",
+              background:loading || !input.trim() ? "var(--border-color)" : BLUE,
+              color:loading || !input.trim() ? "var(--text-secondary)" : "white",
               border:"none",
               borderRadius:"12px",
               cursor:loading || !input.trim() ? "default" : "pointer",
@@ -4062,14 +4078,18 @@ export default function App() {
 
   if (!profile) {
     return (
-      <HomePage onStart={handleStart}/>
+      <>
+        <HomePage onStart={handleStart}/>
+      </>
     );
   }
 
   return (
-    <SubjectPage
-      profile={profile}
-      onHome={() => setProfile(null)}
-    />
+    <>
+      <SubjectPage
+        profile={profile}
+        onHome={() => setProfile(null)}
+      />
+    </>
   );
 }

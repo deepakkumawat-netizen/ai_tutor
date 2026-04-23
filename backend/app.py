@@ -21,6 +21,7 @@ from typing import Optional
 from pydantic import BaseModel
 from mcp_server import get_topics, explain_topic, practice_question, get_educational_videos, quick_answer, TOOLS
 from nlp_engine import nlp_engine
+from crew_integration import handle_tutoring_crew
 
 # Import database with explicit error handling
 try:
@@ -410,6 +411,22 @@ async def serve_frontend(full_path: str):
         return FileResponse(index_file)
 
     return {"error": "Not found"}
+
+# ─── MULTI-AGENT CREW ENDPOINT ────────────────────────
+
+class CrewTutoringRequest(BaseModel):
+    topic: str
+    grade_level: str
+    learning_style: str = "visual"
+
+@app.post("/api/crew/tutor")
+async def crew_tutor(request: CrewTutoringRequest):
+    """Run multi-agent crew for personalized tutoring"""
+    try:
+        result = handle_tutoring_crew(request.topic, request.grade_level, request.learning_style)
+        return result
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Crew error: {str(e)}")
 
 # ═══════════════════════════════════════════════════════════════════════════
 # RUN

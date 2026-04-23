@@ -90,8 +90,8 @@ const ChatHistory = ({ studentId, isOpen, onClose, onSelectChat, apiUrl = 'http:
       top: 0,
       width: 320,
       height: '100vh',
-      background: 'white',
-      borderRight: '1px solid #e5e7eb',
+      background: 'var(--bg-primary)',
+      borderRight: '1px solid var(--border-color)',
       boxShadow: '2px 0 8px rgba(0, 0, 0, 0.1)',
       transform: isOpen ? 'translateX(0)' : 'translateX(-100%)',
       transition: 'transform 0.3s ease-in-out',
@@ -103,7 +103,7 @@ const ChatHistory = ({ studentId, isOpen, onClose, onSelectChat, apiUrl = 'http:
       {/* Header */}
       <div style={{
         padding: 16,
-        borderBottom: '1px solid #e5e7eb',
+        borderBottom: '1px solid var(--border-color)',
         display: 'flex',
         justifyContent: 'space-between',
         alignItems: 'center',
@@ -147,13 +147,13 @@ const ChatHistory = ({ studentId, isOpen, onClose, onSelectChat, apiUrl = 'http:
           </div>
         )}
         {loading ? (
-          <div style={{ padding: 48, textAlign: 'center', color: '#64748b' }}>
+          <div style={{ padding: 48, textAlign: 'center', color: 'var(--text-secondary)' }}>
             Loading chats...
           </div>
         ) : chats.length === 0 ? (
-          <div style={{ padding: 48, textAlign: 'center', color: '#64748b' }}>
+          <div style={{ padding: 48, textAlign: 'center', color: 'var(--text-secondary)' }}>
             <p>No recent chats yet.</p>
-            <p style={{ fontSize: 12, color: '#94a3b8', marginTop: 8 }}>
+            <p style={{ fontSize: 12, color: 'var(--text-secondary)', marginTop: 8 }}>
               Start learning and your last 7 chats will appear here!
             </p>
           </div>
@@ -180,21 +180,21 @@ const ChatHistory = ({ studentId, isOpen, onClose, onSelectChat, apiUrl = 'http:
                   gap: 12,
                   padding: 12,
                   borderRadius: 10,
-                  background: '#f9fafb',
+                  background: 'var(--bg-secondary)',
                   cursor: 'pointer',
                   transition: 'all 0.2s',
-                  border: '1px solid #e5e7eb',
+                  border: '1px solid var(--border-color)',
                   userSelect: 'none'
                 }}
                 onMouseOver={(e) => {
-                  e.currentTarget.style.background = '#eef5ff';
+                  e.currentTarget.style.background = 'var(--bg-tertiary)';
                   e.currentTarget.style.borderColor = '#3b82f6';
                   e.currentTarget.style.transform = 'translateX(4px)';
                   e.currentTarget.style.boxShadow = '0 2px 4px rgba(57, 154, 255, 0.2)';
                 }}
                 onMouseOut={(e) => {
-                  e.currentTarget.style.background = '#f9fafb';
-                  e.currentTarget.style.borderColor = '#e5e7eb';
+                  e.currentTarget.style.background = 'var(--bg-secondary)';
+                  e.currentTarget.style.borderColor = 'var(--border-color)';
                   e.currentTarget.style.transform = 'translateX(0)';
                   e.currentTarget.style.boxShadow = 'none';
                 }}
@@ -203,7 +203,7 @@ const ChatHistory = ({ studentId, isOpen, onClose, onSelectChat, apiUrl = 'http:
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{
                     fontWeight: 600,
-                    color: '#0f172a',
+                    color: 'var(--text-primary)',
                     fontSize: 14,
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
@@ -214,7 +214,7 @@ const ChatHistory = ({ studentId, isOpen, onClose, onSelectChat, apiUrl = 'http:
                   </div>
                   <div style={{
                     fontSize: 12,
-                    color: '#64748b',
+                    color: 'var(--text-secondary)',
                     whiteSpace: 'nowrap',
                     overflow: 'hidden',
                     textOverflow: 'ellipsis',
@@ -224,7 +224,7 @@ const ChatHistory = ({ studentId, isOpen, onClose, onSelectChat, apiUrl = 'http:
                   </div>
                   <div style={{
                     fontSize: 11,
-                    color: '#94a3b8',
+                    color: 'var(--text-secondary)',
                     display: 'flex',
                     gap: '8px'
                   }}>

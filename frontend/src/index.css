@@ -29,13 +29,35 @@
   --radius-lg: 18px;
   --shadow: 0 4px 24px rgba(57, 154, 255, 0.12);
   --shadow-lg: 0 8px 40px rgba(57, 154, 255, 0.18);
+
+  /* Light Theme (default) */
+  --bg-primary: #e8f3ff;
+  --bg-secondary: #ffffff;
+  --bg-tertiary: #f1f5f9;
+  --text-primary: #0f172a;
+  --text-secondary: #64748b;
+  --border-color: #cbd5e1;
+}
+
+/* Dark Theme */
+:root.dark-mode {
+  --bg-primary: #0f172a;
+  --bg-secondary: #1a2332;
+  --bg-tertiary: #253549;
+  --text-primary: #e2e8f0;
+  --text-secondary: #cbd5e1;
+  --border-color: #334155;
+  --blue: #06b6d4;
+  --blue-light: #164e63;
+  --blue-xlight: #082f3f;
 }
 
 html, body, #root {
   height: 100%;
   font-family: var(--font-body);
-  background: #e8f3ff;
-  color: var(--gray-900);
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  transition: background 0.3s ease, color 0.3s ease;
 }
 
 ::-webkit-scrollbar { width: 6px; height: 6px; }

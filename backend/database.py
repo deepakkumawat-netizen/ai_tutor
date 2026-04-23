@@ -4,12 +4,14 @@ Database module for AI Tutor
 - Daily usage limits
 """
 
+import os
 import sqlite3
 import json
 from datetime import datetime
 from pathlib import Path
 
-DB_PATH = Path(__file__).parent / "aitutor.db"
+_DATA_DIR = Path("/var/data") if os.getenv("RENDER") else Path(__file__).parent
+DB_PATH = _DATA_DIR / "aitutor.db"
 
 class TutorDatabase:
     """Manage chat history and usage limits"""
