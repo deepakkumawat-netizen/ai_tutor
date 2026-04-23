@@ -10,7 +10,8 @@ import json
 from datetime import datetime
 from pathlib import Path
 
-_DATA_DIR = Path("/var/data") if os.getenv("RENDER") else Path(__file__).parent
+_render_data = Path("/var/data")
+_DATA_DIR = _render_data if os.getenv("RENDER") and _render_data.exists() else Path(__file__).parent
 DB_PATH = _DATA_DIR / "aitutor.db"
 
 class TutorDatabase:
