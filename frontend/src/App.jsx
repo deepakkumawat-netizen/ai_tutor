@@ -2533,13 +2533,18 @@ function SubjectPage({ profile, onHome }) {
   // Explain a topic using MCP
   const explainTopic = async (topic) => {
     try {
+      const history = messages.slice(-6).map(m => ({
+        role: m.role === 'bot' ? 'assistant' : 'user',
+        content: m.content
+      }));
       const res = await fetch(`${API}/api/mcp/explain-topic`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           subject: activeSubject,
           grade: profile.grade,
-          topic: topic
+          topic: topic,
+          history
         })
       });
       if (!res.ok) return null;

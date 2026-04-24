@@ -90,6 +90,7 @@ class ExplainTopicRequest(BaseModel):
     topic: str
     grade: str
     subject: str
+    history: list = []
 
 class PracticeQuestionRequest(BaseModel):
     subject: str
@@ -136,7 +137,7 @@ async def api_get_topics(request: GetTopicsRequest):
 @app.post("/api/mcp/explain-topic")
 async def api_explain_topic(request: ExplainTopicRequest):
     """Explain a topic"""
-    result = explain_topic(request.topic, request.grade, request.subject)
+    result = explain_topic(request.topic, request.grade, request.subject, history=request.history or [])
 
     # Log what we're returning
     import json

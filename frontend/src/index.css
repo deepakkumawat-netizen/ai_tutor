@@ -68,6 +68,12 @@ html, body, #root {
 /* Smooth scroll for all scrollable elements */
 * { scroll-behavior: smooth; }
 
+/* Disable all transitions for one frame during theme switch to prevent flash */
+.no-transitions, .no-transitions *, .no-transitions *::before, .no-transitions *::after {
+  transition: none !important;
+  animation: none !important;
+}
+
 button { cursor: pointer; font-family: var(--font-body); }
 select { font-family: var(--font-body); }
 

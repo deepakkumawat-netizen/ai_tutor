@@ -158,16 +158,14 @@ def get_grade_language(grade: str) -> str:
     else:
         return "Use academic and technical language. Include advanced concepts and detailed analysis. High school level (10-12). 500-700 words."
 
-def explain_topic(topic: str, grade: str, subject: str) -> dict:
+def explain_topic(topic: str, grade: str, subject: str, history: list = None) -> dict:
     """Explain a topic in detail with grade-appropriate formatting"""
     try:
         grade_num = int(''.join(filter(str.isdigit, grade)) or 6)
         lang_style = get_grade_language(grade)
 
-        response = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[
-                {"role": "system", "content": f"""You are an expert tutor explaining '{topic}' from {subject} to {grade} students.
+        messages = [
+            {"role": "system", "content": f"""You are an expert tutor explaining '{topic}' from {subject} to {grade} students.
 
 {lang_style}
 
@@ -184,9 +182,15 @@ REAL-WORLD EXAMPLE:
 [Practical example students can relate to]
 
 SUMMARY:
-[Brief recap in 1-2 sentences]"""},
-                {"role": "user", "content": f"Explain '{topic}' for {grade} students learning {subject}."}
-            ],
+[Brief recap in 1-2 sentences]"""}
+        ]
+        if history:
+            messages.extend(history[-6:])
+        messages.append({"role": "user", "content": f"Explain '{topic}' for {grade} students learning {subject}."})
+
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=messages,
             max_tokens=600,
             temperature=0.7
         )
