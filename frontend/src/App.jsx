@@ -2699,8 +2699,9 @@ function SubjectPage({ profile, onHome }) {
           }
         }
 
-        // Streaming done — mark complete and save
-        setMessages([{ role: 'bot', topic, content: accumulated, sections: null, streaming: false }]);
+        // Streaming done — parse sections so formatted layout renders
+        const sections = parseSections(accumulated);
+        setMessages([{ role: 'bot', topic, content: accumulated, sections, streaming: false }]);
 
         const studentId = profile.grade || "student";
         // Increment usage
