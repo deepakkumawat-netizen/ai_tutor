@@ -275,6 +275,48 @@ SUMMARY:
             "error": error_msg
         }
 
+def explain_topic_stream(topic: str, grade: str, subject: str, history: list = None):
+    """Stream explanation token by token using OpenAI streaming"""
+    grade_num = int(''.join(filter(str.isdigit, grade)) or 6)
+    lang_style = get_grade_language(grade)
+
+    messages = [
+        {"role": "system", "content": f"""You are an expert tutor explaining '{topic}' from {subject} to {grade} students.
+
+{lang_style}
+
+Format EXACTLY as:
+DEFINITION:
+[Clear definition]
+
+KEY CONCEPTS:
+• Concept 1
+• Concept 2
+• Concept 3
+
+REAL-WORLD EXAMPLE:
+[Practical example students can relate to]
+
+SUMMARY:
+[Brief recap in 1-2 sentences]"""}
+    ]
+    if history:
+        messages.extend(history[-6:])
+    messages.append({"role": "user", "content": f"Explain '{topic}' for {grade} students learning {subject}."})
+
+    stream = client.chat.completions.create(
+        model="gpt-4o-mini",
+        messages=messages,
+        max_tokens=600,
+        temperature=0.7,
+        stream=True
+    )
+    for chunk in stream:
+        delta = chunk.choices[0].delta.content
+        if delta:
+            yield delta
+
+
 def practice_question(subject: str, grade: str) -> dict:
     """Generate a practice question"""
     try:

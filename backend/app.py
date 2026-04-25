@@ -14,12 +14,12 @@ load_dotenv()
 
 from fastapi import FastAPI, HTTPException
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pathlib import Path
 from typing import Optional
 from pydantic import BaseModel
-from mcp_server import get_topics, explain_topic, practice_question, get_educational_videos, quick_answer, TOOLS
+from mcp_server import get_topics, explain_topic, explain_topic_stream, practice_question, get_educational_videos, quick_answer, TOOLS
 from nlp_engine import nlp_engine
 
 # Import database with explicit error handling
@@ -152,6 +152,28 @@ async def api_explain_topic(request: ExplainTopicRequest):
     print(f"[RETURN] Keys being returned: {list(return_obj.keys())}")
     print(f"[RETURN] Sections type: {type(return_obj['sections'])}, len: {len(return_obj.get('sections', {}))}")
     return return_obj
+
+@app.post("/api/mcp/explain-topic-stream")
+async def api_explain_topic_stream(request: ExplainTopicRequest):
+    """Stream explanation token by token — text appears as it's generated"""
+    import json
+
+    def generate():
+        try:
+            for token in explain_topic_stream(
+                request.topic, request.grade, request.subject,
+                history=request.history or []
+            ):
+                yield f"data: {json.dumps({'text': token})}\n\n"
+        except Exception as e:
+            yield f"data: {json.dumps({'error': str(e)})}\n\n"
+        yield "data: [DONE]\n\n"
+
+    return StreamingResponse(
+        generate(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"}
+    )
 
 @app.post("/api/mcp/practice-question")
 async def api_practice_question(request: PracticeQuestionRequest):

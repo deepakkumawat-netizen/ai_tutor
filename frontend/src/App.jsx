@@ -2651,103 +2651,90 @@ function SubjectPage({ profile, onHome }) {
     };
   };
 
-  // Choose a topic and start the lesson using MCP
+  // Choose a topic and start the lesson — streams text word by word
   const chooseTopic = (topic) => {
     setActiveTopic(topic);
     setShowTopicMenu(false);
-    setMessages([]);
-    setLoading(true);
+    setMessages([{ role: "bot", topic, content: "", sections: null, streaming: true }]);
+    setLoading(false);
+    setVoiceState("idle");
 
-    // Get explanation for the topic
-    explainTopic(topic).then(data => {
-      if (data) {
-        const response = data.explanation || "Topic explanation loading...";
-        const botMessage = {
-          role: "bot",
-          topic: topic,
-          content: response,
-          sections: data.sections || null
-        };
-        setMessages([botMessage]);
-        // No automatic speaking - user must click "Hear Explanation" button
-        setVoiceState("idle");
+    (async () => {
+      try {
+        const history = messages.slice(-6).map(m => ({
+          role: m.role === 'bot' ? 'assistant' : 'user',
+          content: m.content
+        }));
 
-        // Save to chat history and increment usage
-        const studentId = profile.grade || "student";
-        console.log("[AI-Tutor] Saving lesson chat with content length:", response.length);
-        console.log("[AI-Tutor] API URL:", API);
-        console.log("[AI-Tutor] Student ID:", studentId);
+        const res = await fetch(`${API}/api/mcp/explain-topic-stream`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ subject: activeSubject, grade: profile.grade, topic, history })
+        });
 
-        // Increment usage and refresh counter
-        const incrementUsage = async () => {
-          try {
-            console.log("[AI-Tutor] Calling increment-usage from chooseTopic...");
-            const res = await fetch(`${API}/api/increment-usage`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                student_id: studentId,
-                lesson_type: "lesson"
-              })
-            });
-            const result = await res.json();
-            console.log("[AI-Tutor] Usage incremented response:", result);
+        if (!res.ok) throw new Error("Stream failed");
 
-            // Check if limit is exceeded
-            if (result.exceeded) {
-              setLimitExceeded(true);
-              setLimitMessage(`⚠️ Daily limit reached! You've used ${result.usage_count}/${result.limit} lessons today. Please try again tomorrow.`);
-              console.log("[AI-Tutor] Daily limit exceeded:", result);
-            }
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let accumulated = '';
+        let buffer = '';
 
-            // Refresh counter after successful increment
-            setTimeout(() => {
-              console.log("[AI-Tutor] Refreshing counter, ref current:", usageCounterRef.current);
-              if (usageCounterRef.current) {
-                usageCounterRef.current.refresh();
-                console.log("[AI-Tutor] Counter refresh called");
-              } else {
-                console.error("[AI-Tutor] usageCounterRef.current is null");
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop(); // keep incomplete line in buffer
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            const payload = line.slice(6);
+            if (payload === '[DONE]') break;
+            try {
+              const parsed = JSON.parse(payload);
+              if (parsed.text) {
+                accumulated += parsed.text;
+                setMessages([{ role: 'bot', topic, content: accumulated, sections: null, streaming: true }]);
               }
-            }, 100);
-          } catch (e) {
-            console.error("[AI-Tutor] Usage increment error:", e);
+            } catch {}
           }
-        };
+        }
+
+        // Streaming done — mark complete and save
+        setMessages([{ role: 'bot', topic, content: accumulated, sections: null, streaming: false }]);
+
+        const studentId = profile.grade || "student";
+        // Increment usage
+        try {
+          const res2 = await fetch(`${API}/api/increment-usage`, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ student_id: studentId, lesson_type: "lesson" })
+          });
+          const result = await res2.json();
+          if (result.exceeded) {
+            setLimitExceeded(true);
+            setLimitMessage(`⚠️ Daily limit reached! You've used ${result.usage_count}/${result.limit} lessons today.`);
+          }
+          setTimeout(() => { if (usageCounterRef.current) usageCounterRef.current.refresh(); }, 100);
+        } catch {}
 
         // Save chat
-        const saveChat = async () => {
-          try {
-            console.log("[AI-Tutor] Calling save-chat from chooseTopic...");
-            const res = await fetch(`${API}/api/save-chat`, {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({
-                student_id: studentId,
-                topic: topic,
-                grade_level: profile.grade,
-                subject: profile.subject || "General",
-                request_data: { topic: topic },
-                response_preview: response.substring(0, 200),
-                response_content: response
-              })
-            });
-            const result = await res.json();
-            console.log("[AI-Tutor] Chat saved response:", result);
-          } catch (e) {
-            console.error("[AI-Tutor] Save chat error:", e);
-          }
-        };
+        try {
+          await fetch(`${API}/api/save-chat`, {
+            method: "POST", headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              student_id: studentId, topic, grade_level: profile.grade,
+              subject: profile.subject || "General",
+              request_data: { topic },
+              response_preview: accumulated.substring(0, 200),
+              response_content: accumulated
+            })
+          });
+        } catch {}
 
-        // Call both
-        incrementUsage();
-        saveChat();
-      } else {
-        const errorMsg = "Could not load topic. Please try again.";
-        setMessages([{ role:"bot", content: errorMsg }]);
-        setVoiceState("idle");
+      } catch {
+        setMessages([{ role: "bot", content: "Could not load topic. Please try again." }]);
       }
-    }).finally(() => setLoading(false));
+    })();
   };
 
   // Send text message (from input or voice)
