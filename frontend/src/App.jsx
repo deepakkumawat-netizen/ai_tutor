@@ -4234,12 +4234,7 @@ function SubjectPage({ profile, onHome }) {
 
 // ─── MAIN APP COMPONENT ─────────────────────────────────────────────────────────
 export default function App() {
-  const [profile, setProfile] = useState(() => {
-    try {
-      const saved = localStorage.getItem("ai_tutor_profile");
-      return saved ? JSON.parse(saved) : null;
-    } catch { return null; }
-  });
+  const [profile, setProfile] = useState(null);
 
   const handleStart = (p) => {
     console.log("App received profile:", p);
