@@ -3454,6 +3454,31 @@ function SubjectPage({ profile, onHome }) {
         </div>
       )}
 
+      {/* Get Started prompt — shown only when no topic is selected */}
+      {!activeTopic && !topicsLoading && (
+        <div style={{ padding:"24px 20px 32px", textAlign:"center" }}>
+          <div style={{ fontSize:"40px", marginBottom:"12px" }}>👆</div>
+          <div style={{ fontSize:"18px", fontWeight:"700", color:"var(--text-primary)", marginBottom:"8px" }}>
+            Pick a topic to start learning!
+          </div>
+          <div style={{ fontSize:"13px", color:"var(--text-secondary)", maxWidth:"320px", margin:"0 auto 20px" }}>
+            Choose any topic above and your AI Tutor will explain it step-by-step, just for you.
+          </div>
+          <div style={{ display:"flex", justifyContent:"center", gap:"10px", flexWrap:"wrap" }}>
+            {["Ask anything 🤔", "Learn at your pace 🐢", "Get instant answers ⚡", "Practice with quizzes 📝"].map((tag, i) => (
+              <span key={i} style={{
+                background:"var(--bg-secondary)",
+                border:"1px solid var(--border-color)",
+                borderRadius:"20px",
+                padding:"5px 14px",
+                fontSize:"12px",
+                color:"var(--text-secondary)"
+              }}>{tag}</span>
+            ))}
+          </div>
+        </div>
+      )}
+
       {/* Active Topic Header with View Toggle */}
       {activeTopic && (
         <div style={{
