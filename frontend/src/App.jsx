@@ -3851,7 +3851,27 @@ function SubjectPage({ profile, onHome }) {
                   overflow:"hidden"
                 }}
               >
-                {msg.sections ? (
+                {msg.streaming ? (
+                  // Loading animation while streaming — never show raw text
+                  <div style={{ padding:"24px 20px", textAlign:"center" }}>
+                    <div style={{ fontSize:"15px", fontWeight:"600", color:BLUE, marginBottom:"16px" }}>
+                      📚 Preparing your lesson on <em>{msg.topic}</em>...
+                    </div>
+                    <div style={{ display:"flex", gap:"10px", justifyContent:"center", marginBottom:"12px" }}>
+                      {["📖","💡","🌍","✨"].map((emoji, i) => (
+                        <div key={i} style={{
+                          width:"44px", height:"44px", borderRadius:"12px",
+                          background:"rgba(57,154,255,0.1)", border:`1.5px solid rgba(57,154,255,0.2)`,
+                          display:"flex", alignItems:"center", justifyContent:"center", fontSize:"20px",
+                          animation:`pulse 1.5s ease-in-out ${i*0.2}s infinite`
+                        }}>{emoji}</div>
+                      ))}
+                    </div>
+                    <div style={{ fontSize:"13px", color:"var(--text-secondary)" }}>
+                      AI is writing your personalised lesson...
+                    </div>
+                  </div>
+                ) : msg.sections ? (
                   // Structured content with sections
                   <div style={{ padding:"18px 20px" }}>
                     <div style={{ fontSize:"16px", fontWeight:"700", color:BLUE, marginBottom:"14px" }}>
@@ -3982,7 +4002,7 @@ function SubjectPage({ profile, onHome }) {
                     )}
                   </div>
                 ) : (
-                  // Fallback to plain text (for practice questions, etc.)
+                  // Fallback plain text for practice questions / follow-up answers
                   <div style={{ padding:"14px 18px", color:"var(--text-primary)", fontSize:"15px", lineHeight:"1.6", ...getMessageStyles() }}>
                     {formatContentForGrade(msg.content)}
                   </div>
@@ -4148,10 +4168,16 @@ function SubjectPage({ profile, onHome }) {
 
 // ─── MAIN APP COMPONENT ─────────────────────────────────────────────────────────
 export default function App() {
-  const [profile, setProfile] = useState(null);
+  const [profile, setProfile] = useState(() => {
+    try {
+      const saved = localStorage.getItem("ai_tutor_profile");
+      return saved ? JSON.parse(saved) : null;
+    } catch { return null; }
+  });
 
   const handleStart = (p) => {
     console.log("App received profile:", p);
+    localStorage.setItem("ai_tutor_profile", JSON.stringify(p));
     setProfile(p);
   };
 
@@ -4167,7 +4193,10 @@ export default function App() {
     <>
       <SubjectPage
         profile={profile}
-        onHome={() => setProfile(null)}
+        onHome={() => {
+          localStorage.removeItem("ai_tutor_profile");
+          setProfile(null);
+        }}
       />
     </>
   );

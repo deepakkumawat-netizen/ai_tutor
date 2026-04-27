@@ -9,7 +9,7 @@ export default defineConfig({
     open: true,        // auto-open browser on whatever port it lands on
     proxy: {
       '/api': {
-        target: 'http://localhost:5000',
+        target: 'http://localhost:5001',
         changeOrigin: true,
       }
     }
