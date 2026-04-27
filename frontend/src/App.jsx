@@ -2252,7 +2252,7 @@ function SubjectPage({ profile, onHome }) {
   const [listening, setListening]   = useState(false);
   const [speaking, setSpeaking]     = useState(false);
   const [activeTopic, setActiveTopic] = useState(null);
-  const [topicList, setTopicList]   = useState(() => GRADE_TOPICS[profile.subject]?.[profile.grade] || []);
+  const [topicList, setTopicList]   = useState([]);
   const [topicsLoading, setTopicsLoading] = useState(true);
   const [showTopicMenu, setShowTopicMenu] = useState(false);
 
@@ -2502,9 +2502,7 @@ function SubjectPage({ profile, onHome }) {
   useEffect(() => {
     const loadTopicsForSubject = async () => {
       const subjectToQuery = activeSubject === "custom" ? profile.subjectLabel : activeSubject;
-      const fallback = GRADE_TOPICS[activeSubject]?.[profile.grade] || [];
-      // Show fallback immediately so chips never blank
-      if (fallback.length > 0) setTopicList(fallback);
+      setTopicList([]);
       setTopicsLoading(true);
       try {
         const res = await fetch(`${API}/api/mcp/get-topics`, {
@@ -2512,9 +2510,9 @@ function SubjectPage({ profile, onHome }) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ subject: subjectToQuery, grade: profile.grade })
         });
-        if (!res.ok) { setTopicList(fallback.length ? fallback : topicListFallback); return; }
+        if (!res.ok) { setTopicsLoading(false); return; }
         const data = await res.json();
-        const topics = data.topics?.length ? data.topics : (fallback.length ? fallback : topicListFallback);
+        const topics = data.topics || [];
         setTopicList(topics);
         fetch(`${API}/api/semantic/embed-topics`, {
           method: "POST",
@@ -2522,7 +2520,7 @@ function SubjectPage({ profile, onHome }) {
           body: JSON.stringify({ subject: subjectToQuery, grade: profile.grade, topics })
         }).catch(() => {});
       } catch (e) {
-        setTopicList(fallback.length ? fallback : topicListFallback);
+        // keep empty, skeleton will show retry option
       } finally {
         setTopicsLoading(false);
       }
@@ -2540,8 +2538,7 @@ function SubjectPage({ profile, onHome }) {
 
   // Get available topics using MCP (for initial load)
   const loadTopics = async () => {
-    const fallback = GRADE_TOPICS[activeSubject]?.[profile.grade] || topicListFallback;
-    if (fallback.length > 0) setTopicList(fallback);
+    setTopicsLoading(true);
     try {
       const subjectToQuery = activeSubject === "custom" ? profile.subjectLabel : activeSubject;
       const res = await fetch(`${API}/api/mcp/get-topics`, {
@@ -2549,11 +2546,11 @@ function SubjectPage({ profile, onHome }) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ subject: subjectToQuery, grade: profile.grade })
       });
-      if (!res.ok) { setTopicList(fallback); return; }
+      if (!res.ok) { setTopicsLoading(false); return; }
       const data = await res.json();
-      setTopicList(data.topics?.length ? data.topics : fallback);
+      setTopicList(data.topics || []);
     } catch (e) {
-      setTopicList(fallback);
+      // keep empty
     } finally {
       setTopicsLoading(false);
     }
@@ -3378,43 +3375,51 @@ function SubjectPage({ profile, onHome }) {
               borderRadius:"12px",
               marginTop:"12px"
             }}>
-              {topicList.slice(0, 12).map((topic, i) => (
-                <button
-                  key={i}
-                  onClick={() => chooseTopic(topic)}
-                  style={{
-                    padding:"12px 10px",
-                    background:"var(--bg-secondary)",
-                    border:`1px solid ${BORDER}`,
-                    borderRadius:"10px",
-                    cursor:"pointer",
-                    fontSize:"13px",
-                    fontWeight:"600",
-                    color:"var(--text-primary)",
-                    transition:"all 0.2s",
-                    textAlign:"center",
-                    lineHeight:"1.4"
-                  }}
-                  onMouseEnter={(e) => {
-                    e.target.style.background = "var(--bg-tertiary)";
-                    e.target.style.transform = "translateY(-2px)";
-                    e.target.style.boxShadow = "0 4px 12px rgba(57,154,255,0.2)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.target.style.background = "var(--bg-secondary)";
-                    e.target.style.transform = "translateY(0)";
-                    e.target.style.boxShadow = "none";
-                  }}
-                >
-                  {CHIP_EMOJIS[i % CHIP_EMOJIS.length]} {topic}
-                </button>
-              ))}
+              {topicsLoading
+                ? Array.from({ length: 8 }).map((_, i) => (
+                    <div key={i} style={{
+                      padding:"12px 10px",
+                      borderRadius:"10px",
+                      height:"44px",
+                      background:"linear-gradient(90deg, var(--bg-tertiary) 25%, var(--bg-secondary) 50%, var(--bg-tertiary) 75%)",
+                      backgroundSize:"200% 100%",
+                      animation:"shimmer 1.4s infinite",
+                      border:`1px solid ${BORDER}`,
+                    }} />
+                  ))
+                : topicList.slice(0, 12).map((topic, i) => (
+                    <button
+                      key={i}
+                      onClick={() => chooseTopic(topic)}
+                      style={{
+                        padding:"12px 10px",
+                        background:"var(--bg-secondary)",
+                        border:`1px solid ${BORDER}`,
+                        borderRadius:"10px",
+                        cursor:"pointer",
+                        fontSize:"13px",
+                        fontWeight:"600",
+                        color:"var(--text-primary)",
+                        transition:"all 0.2s",
+                        textAlign:"center",
+                        lineHeight:"1.4"
+                      }}
+                      onMouseEnter={(e) => {
+                        e.target.style.background = "var(--bg-tertiary)";
+                        e.target.style.transform = "translateY(-2px)";
+                        e.target.style.boxShadow = "0 4px 12px rgba(57,154,255,0.2)";
+                      }}
+                      onMouseLeave={(e) => {
+                        e.target.style.background = "var(--bg-secondary)";
+                        e.target.style.transform = "translateY(0)";
+                        e.target.style.boxShadow = "none";
+                      }}
+                    >
+                      {CHIP_EMOJIS[i % CHIP_EMOJIS.length]} {topic}
+                    </button>
+                  ))
+              }
             </div>
-            {topicsLoading && (
-              <div style={{ textAlign:"center", fontSize:"11px", color:"var(--text-secondary)", marginTop:"8px", opacity:0.6 }}>
-                ✨ Loading personalised topics…
-              </div>
-            )}
           )}
         </div>
       )}
