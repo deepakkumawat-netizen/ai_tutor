@@ -3363,83 +3363,93 @@ function SubjectPage({ profile, onHome }) {
 
           {/* Show all topics if no search query */}
           {!searchQuery && (
-            <div style={{
-              display:"grid",
-              gridTemplateColumns:"repeat(auto-fill, minmax(140px, 1fr))",
-              gap:"10px",
-              minHeight:"120px",
-              maxHeight:"250px",
-              overflowY:"auto",
-              padding:"12px",
-              background:"var(--bg-secondary)",
-              border:`1.5px solid ${BORDER}`,
-              borderRadius:"12px",
-              marginTop:"12px"
-            }}>
-              {topicsLoading
-                ? [
-                    "🌟 You're a genius in the making!",
-                    "💡 Every question makes you smarter!",
-                    "🚀 Learning is your superpower!",
-                    "🎯 Curiosity opens every door!",
-                    "🧠 Your brain grows with every lesson!",
-                    "✨ Great minds start just like yours!",
-                    "🏆 Today's effort = tomorrow's success!",
-                    "🌈 Mistakes are just lessons in disguise!",
-                  ].map((msg, i) => (
+            topicsLoading ? (
+              /* ── Hero cards while topics load ── */
+              <div style={{ marginTop:"12px" }}>
+                <div style={{ fontSize:"11px", color:"var(--text-secondary)", textAlign:"center", marginBottom:"10px", letterSpacing:"1px", textTransform:"uppercase" }}>
+                  🇮🇳 India's Greatest Minds — Be Inspired!
+                </div>
+                <div style={{
+                  display:"grid",
+                  gridTemplateColumns:"repeat(auto-fill, minmax(160px, 1fr))",
+                  gap:"12px",
+                }}>
+                  {[
+                    { img:"https://upload.wikimedia.org/wikipedia/commons/thumb/6/6e/A._P._J._Abdul_Kalam.jpg/200px-A._P._J._Abdul_Kalam.jpg",  name:"APJ Abdul Kalam",  role:"Scientist & President",       quote:"Dream, dream, dream!",                  color:"#1a3a5c" },
+                    { img:"https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Srinivasa_Ramanujan_-_OPC_-_1.jpg/200px-Srinivasa_Ramanujan_-_OPC_-_1.jpg", name:"Ramanujan",        role:"Mathematics Genius",          quote:"Numbers were his best friends.",        color:"#1a2e1a" },
+                    { img:"https://upload.wikimedia.org/wikipedia/commons/thumb/3/38/CV_Raman_photo.jpg/200px-CV_Raman_photo.jpg",               name:"C.V. Raman",       role:"Nobel Prize — Physics",        quote:"Curiosity led him to light.",           color:"#2e1a1a" },
+                    { img:"https://upload.wikimedia.org/wikipedia/commons/thumb/6/60/Vikram_Sarabhai.jpg/200px-Vikram_Sarabhai.jpg",             name:"Vikram Sarabhai",  role:"Father of ISRO",              quote:"He put India in space.",                color:"#1a1a3a" },
+                    { img:"https://upload.wikimedia.org/wikipedia/commons/thumb/2/2a/Savitribai_Phule.jpg/200px-Savitribai_Phule.jpg",           name:"Savitribai Phule", role:"India's First Teacher",       quote:"She fought so you could study.",        color:"#2e1a2e" },
+                    { img:"https://upload.wikimedia.org/wikipedia/commons/thumb/f/f8/Homi_Jehangir_Bhabha_1960s.jpg/200px-Homi_Jehangir_Bhabha_1960s.jpg", name:"Homi Bhabha",  role:"Father of Nuclear Science",   quote:"Science is India's strength.",         color:"#1a2e2e" },
+                    { img:"https://upload.wikimedia.org/wikipedia/commons/thumb/0/0e/Shakuntala_Devi_2013_stamp_of_India.jpg/200px-Shakuntala_Devi_2013_stamp_of_India.jpg", name:"Shakuntala Devi", role:"Human Computer", quote:"Faster than any machine!",             color:"#2e2a10" },
+                    { img:"https://upload.wikimedia.org/wikipedia/commons/thumb/b/b5/Kalpana_Chawla%2C_NASA_photo_portrait_in_orange_suit.jpg/200px-Kalpana_Chawla%2C_NASA_photo_portrait_in_orange_suit.jpg", name:"Kalpana Chawla", role:"First Indian Woman in Space", quote:"Stars were just the beginning.",        color:"#1a1a2e" },
+                  ].map((hero, i) => (
                     <div key={i} style={{
-                      padding:"12px 10px",
-                      borderRadius:"10px",
-                      fontSize:"12px",
-                      fontWeight:"600",
-                      color:"var(--text-secondary)",
-                      textAlign:"center",
-                      lineHeight:"1.4",
-                      background:"var(--bg-secondary)",
+                      borderRadius:"14px",
+                      background:hero.color,
                       border:`1px solid ${BORDER}`,
+                      overflow:"hidden",
                       display:"flex",
+                      flexDirection:"column",
                       alignItems:"center",
-                      justifyContent:"center",
-                      animation:`fadeIn 0.4s ${i * 0.08}s both`,
+                      animation:`fadeIn 0.5s ${i * 0.1}s both`,
                       cursor:"default",
                       userSelect:"none",
                     }}>
-                      {msg}
+                      <img
+                        src={hero.img}
+                        alt={hero.name}
+                        style={{ width:"100%", height:"140px", objectFit:"cover", objectPosition:"center top" }}
+                        onError={e => { e.target.style.display="none"; }}
+                      />
+                      <div style={{ padding:"10px 10px 12px", textAlign:"center" }}>
+                        <div style={{ fontSize:"13px", fontWeight:"700", color:"#fff", marginBottom:"2px" }}>{hero.name}</div>
+                        <div style={{ fontSize:"10px", color:"#399aff", fontWeight:"600", marginBottom:"6px" }}>{hero.role}</div>
+                        <div style={{ fontSize:"10px", color:"rgba(255,255,255,0.65)", fontStyle:"italic", lineHeight:"1.4" }}>"{hero.quote}"</div>
+                      </div>
                     </div>
-                  ))
-                : topicList.slice(0, 12).map((topic, i) => (
-                    <button
-                      key={i}
-                      onClick={() => chooseTopic(topic)}
-                      style={{
-                        padding:"12px 10px",
-                        background:"var(--bg-secondary)",
-                        border:`1px solid ${BORDER}`,
-                        borderRadius:"10px",
-                        cursor:"pointer",
-                        fontSize:"13px",
-                        fontWeight:"600",
-                        color:"var(--text-primary)",
-                        transition:"all 0.2s",
-                        textAlign:"center",
-                        lineHeight:"1.4"
-                      }}
-                      onMouseEnter={(e) => {
-                        e.target.style.background = "var(--bg-tertiary)";
-                        e.target.style.transform = "translateY(-2px)";
-                        e.target.style.boxShadow = "0 4px 12px rgba(57,154,255,0.2)";
-                      }}
-                      onMouseLeave={(e) => {
-                        e.target.style.background = "var(--bg-secondary)";
-                        e.target.style.transform = "translateY(0)";
-                        e.target.style.boxShadow = "none";
-                      }}
-                    >
-                      {CHIP_EMOJIS[i % CHIP_EMOJIS.length]} {topic}
-                    </button>
-                  ))
-              }
-            </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              /* ── Regular topic chips after API responds ── */
+              <div style={{
+                display:"grid",
+                gridTemplateColumns:"repeat(auto-fill, minmax(140px, 1fr))",
+                gap:"10px",
+                maxHeight:"250px",
+                overflowY:"auto",
+                padding:"12px",
+                background:"var(--bg-secondary)",
+                border:`1.5px solid ${BORDER}`,
+                borderRadius:"12px",
+                marginTop:"12px"
+              }}>
+                {topicList.slice(0, 12).map((topic, i) => (
+                  <button
+                    key={i}
+                    onClick={() => chooseTopic(topic)}
+                    style={{
+                      padding:"12px 10px",
+                      background:"var(--bg-secondary)",
+                      border:`1px solid ${BORDER}`,
+                      borderRadius:"10px",
+                      cursor:"pointer",
+                      fontSize:"13px",
+                      fontWeight:"600",
+                      color:"var(--text-primary)",
+                      transition:"all 0.2s",
+                      textAlign:"center",
+                      lineHeight:"1.4"
+                    }}
+                    onMouseEnter={e => { e.target.style.background="var(--bg-tertiary)"; e.target.style.transform="translateY(-2px)"; e.target.style.boxShadow="0 4px 12px rgba(57,154,255,0.2)"; }}
+                    onMouseLeave={e => { e.target.style.background="var(--bg-secondary)"; e.target.style.transform="translateY(0)"; e.target.style.boxShadow="none"; }}
+                  >
+                    {CHIP_EMOJIS[i % CHIP_EMOJIS.length]} {topic}
+                  </button>
+                ))}
+              </div>
+            )
           )}
         </div>
       )}
