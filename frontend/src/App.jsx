@@ -3367,6 +3367,7 @@ function SubjectPage({ profile, onHome }) {
               display:"grid",
               gridTemplateColumns:"repeat(auto-fill, minmax(140px, 1fr))",
               gap:"10px",
+              minHeight:"120px",
               maxHeight:"250px",
               overflowY:"auto",
               padding:"12px",
@@ -3376,16 +3377,35 @@ function SubjectPage({ profile, onHome }) {
               marginTop:"12px"
             }}>
               {topicsLoading
-                ? Array.from({ length: 8 }).map((_, i) => (
+                ? [
+                    "🌟 You're a genius in the making!",
+                    "💡 Every question makes you smarter!",
+                    "🚀 Learning is your superpower!",
+                    "🎯 Curiosity opens every door!",
+                    "🧠 Your brain grows with every lesson!",
+                    "✨ Great minds start just like yours!",
+                    "🏆 Today's effort = tomorrow's success!",
+                    "🌈 Mistakes are just lessons in disguise!",
+                  ].map((msg, i) => (
                     <div key={i} style={{
                       padding:"12px 10px",
                       borderRadius:"10px",
-                      height:"44px",
-                      background:"linear-gradient(90deg, var(--bg-tertiary) 25%, var(--bg-secondary) 50%, var(--bg-tertiary) 75%)",
-                      backgroundSize:"200% 100%",
-                      animation:"shimmer 1.4s infinite",
+                      fontSize:"12px",
+                      fontWeight:"600",
+                      color:"var(--text-secondary)",
+                      textAlign:"center",
+                      lineHeight:"1.4",
+                      background:"var(--bg-secondary)",
                       border:`1px solid ${BORDER}`,
-                    }} />
+                      display:"flex",
+                      alignItems:"center",
+                      justifyContent:"center",
+                      animation:`fadeIn 0.4s ${i * 0.08}s both`,
+                      cursor:"default",
+                      userSelect:"none",
+                    }}>
+                      {msg}
+                    </div>
                   ))
                 : topicList.slice(0, 12).map((topic, i) => (
                     <button
