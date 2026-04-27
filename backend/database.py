@@ -228,7 +228,7 @@ class TutorDatabase:
             ON CONFLICT(subject, grade, topic) DO UPDATE SET
                 embedding = excluded.embedding,
                 created_at = CURRENT_TIMESTAMP
-        ''', (subject, grade, topic, json.dumps(embedding)))
+        ''', (subject.lower(), grade.lower(), topic, json.dumps(embedding)))
         conn.commit()
         conn.close()
 
@@ -239,7 +239,7 @@ class TutorDatabase:
         c.execute('''
             SELECT topic, embedding FROM topic_embeddings
             WHERE subject = ? AND grade = ?
-        ''', (subject, grade))
+        ''', (subject.lower(), grade.lower()))
         rows = c.fetchall()
         conn.close()
         return [{"topic": row[0], "embedding": json.loads(row[1])} for row in rows]

@@ -426,14 +426,12 @@ async def embed_topics(request: EmbedTopicsRequest):
     if not voyage_service.is_configured():
         return {"success": False, "error": "Voyage AI not configured"}
     try:
-        subject = request.subject.lower()
-        grade = request.grade
-        existing = {row["topic"] for row in db.get_topic_embeddings(subject, grade)}
+        existing = {row["topic"] for row in db.get_topic_embeddings(request.subject, request.grade)}
         new_topics = [t for t in request.topics if t not in existing]
         if new_topics:
             embeddings = voyage_service.embed_batch(new_topics)
             for topic, emb in zip(new_topics, embeddings):
-                db.save_topic_embedding(subject, grade, topic, emb)
+                db.save_topic_embedding(request.subject, request.grade, topic, emb)
         return {"success": True, "embedded": len(new_topics), "total": len(request.topics)}
     except Exception as e:
         print(f"[ERROR] embed_topics: {e}")
@@ -445,7 +443,7 @@ async def semantic_search(request: SemanticSearchRequest):
     if not voyage_service.is_configured():
         return {"success": False, "results": []}
     try:
-        candidates = db.get_topic_embeddings(request.subject.lower(), request.grade)
+        candidates = db.get_topic_embeddings(request.subject, request.grade)
         if not candidates:
             return {"success": True, "results": [], "message": "No embeddings yet"}
         query_emb = voyage_service.embed_text(request.query)
@@ -461,7 +459,7 @@ async def related_topics(request: SemanticSearchRequest):
     if not voyage_service.is_configured():
         return {"success": False, "results": []}
     try:
-        candidates = db.get_topic_embeddings(request.subject.lower(), request.grade)
+        candidates = db.get_topic_embeddings(request.subject, request.grade)
         candidates = [c for c in candidates if c["topic"].lower() != request.query.lower()]
         if not candidates:
             return {"success": True, "results": []}
