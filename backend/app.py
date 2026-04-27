@@ -464,7 +464,7 @@ async def related_topics(request: SemanticSearchRequest):
         if not candidates:
             return {"success": True, "results": []}
         query_emb = voyage_service.embed_text(request.query)
-        results = voyage_service.rank_by_similarity(query_emb, candidates, top_k=request.top_k, min_score=0.3)
+        results = voyage_service.rank_diverse(query_emb, candidates, top_k=request.top_k, min_score=0.3)
         return {"success": True, "results": [{"topic": r["topic"], "score": r["score"]} for r in results]}
     except Exception as e:
         print(f"[ERROR] related_topics: {e}")

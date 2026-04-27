@@ -54,3 +54,33 @@ def rank_by_similarity(
             scored.append({**c, "score": round(score, 4)})
     scored.sort(key=lambda x: x["score"], reverse=True)
     return scored[:top_k]
+
+def rank_diverse(
+    query_embedding: list[float],
+    candidates: list[dict],
+    top_k: int = 4,
+    min_score: float = 0.3,
+    diversity_threshold: float = 0.82
+) -> list[dict]:
+    """
+    Return diverse top_k results — skips candidates too similar to
+    already-selected ones so you don't get 4 variants of the same topic.
+    """
+    scored = []
+    for c in candidates:
+        score = cosine_similarity(query_embedding, c["embedding"])
+        if score >= min_score:
+            scored.append({**c, "score": round(score, 4)})
+    scored.sort(key=lambda x: x["score"], reverse=True)
+
+    selected = []
+    for candidate in scored:
+        too_similar = any(
+            cosine_similarity(candidate["embedding"], s["embedding"]) >= diversity_threshold
+            for s in selected
+        )
+        if not too_similar:
+            selected.append(candidate)
+        if len(selected) == top_k:
+            break
+    return selected
