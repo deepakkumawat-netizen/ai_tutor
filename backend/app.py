@@ -460,6 +460,22 @@ async def related_topics(request: SemanticSearchRequest):
         return {"success": False, "results": []}
     try:
         candidates = db.get_topic_embeddings(request.subject, request.grade)
+
+        # Auto-embed if this subject+grade has no stored embeddings yet
+        if not candidates:
+            print(f"[SEMANTIC] No embeddings for {request.subject}/{request.grade} — auto-embedding now")
+            try:
+                topics_data = get_topics(request.subject, request.grade)
+                topics = topics_data.get("topics", [])
+                if topics:
+                    embeddings = voyage_service.embed_batch(topics)
+                    for topic, emb in zip(topics, embeddings):
+                        db.save_topic_embedding(request.subject, request.grade, topic, emb)
+                    candidates = db.get_topic_embeddings(request.subject, request.grade)
+                    print(f"[SEMANTIC] Auto-embedded {len(candidates)} topics for {request.subject}/{request.grade}")
+            except Exception as embed_err:
+                print(f"[WARN] Auto-embed failed: {embed_err}")
+
         candidates = [c for c in candidates if c["topic"].lower() != request.query.lower()]
         if not candidates:
             return {"success": True, "results": []}
