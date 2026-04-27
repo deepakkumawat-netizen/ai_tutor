@@ -2252,7 +2252,8 @@ function SubjectPage({ profile, onHome }) {
   const [listening, setListening]   = useState(false);
   const [speaking, setSpeaking]     = useState(false);
   const [activeTopic, setActiveTopic] = useState(null);
-  const [topicList, setTopicList]   = useState([]);
+  const [topicList, setTopicList]   = useState(() => GRADE_TOPICS[profile.subject]?.[profile.grade] || []);
+  const [topicsLoading, setTopicsLoading] = useState(true);
   const [showTopicMenu, setShowTopicMenu] = useState(false);
 
   // NEW: Search, sidebar, voice state, subject switching
@@ -2500,33 +2501,30 @@ function SubjectPage({ profile, onHome }) {
   // NEW: Load topics when active subject changes
   useEffect(() => {
     const loadTopicsForSubject = async () => {
-      // Use subjectLabel for custom subjects, otherwise use activeSubject
       const subjectToQuery = activeSubject === "custom" ? profile.subjectLabel : activeSubject;
-      console.log("Loading topics for subject:", subjectToQuery, "grade:", profile.grade);
+      const fallback = GRADE_TOPICS[activeSubject]?.[profile.grade] || [];
+      // Show fallback immediately so chips never blank
+      if (fallback.length > 0) setTopicList(fallback);
+      setTopicsLoading(true);
       try {
         const res = await fetch(`${API}/api/mcp/get-topics`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ subject: subjectToQuery, grade: profile.grade })
         });
-        if (!res.ok) {
-          console.warn("API error loading topics, using fallback");
-          setTopicList(topicListFallback);
-          return;
-        }
+        if (!res.ok) { setTopicList(fallback.length ? fallback : topicListFallback); return; }
         const data = await res.json();
-        console.log("Topics loaded:", data.topics?.length, "topics");
-        const topics = data.topics || topicListFallback;
+        const topics = data.topics?.length ? data.topics : (fallback.length ? fallback : topicListFallback);
         setTopicList(topics);
-        // Background: embed topics for semantic search (only sends new ones)
         fetch(`${API}/api/semantic/embed-topics`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ subject: subjectToQuery, grade: profile.grade, topics })
         }).catch(() => {});
       } catch (e) {
-        console.error("Error loading topics:", e);
-        setTopicList(topicListFallback);
+        setTopicList(fallback.length ? fallback : topicListFallback);
+      } finally {
+        setTopicsLoading(false);
       }
     };
     loadTopicsForSubject();
@@ -2542,22 +2540,22 @@ function SubjectPage({ profile, onHome }) {
 
   // Get available topics using MCP (for initial load)
   const loadTopics = async () => {
+    const fallback = GRADE_TOPICS[activeSubject]?.[profile.grade] || topicListFallback;
+    if (fallback.length > 0) setTopicList(fallback);
     try {
-      // Use subjectLabel for custom subjects, otherwise use activeSubject
       const subjectToQuery = activeSubject === "custom" ? profile.subjectLabel : activeSubject;
       const res = await fetch(`${API}/api/mcp/get-topics`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ subject: subjectToQuery, grade: profile.grade })
       });
-      if (!res.ok) {
-        setTopicList(topicListFallback);
-        return;
-      }
+      if (!res.ok) { setTopicList(fallback); return; }
       const data = await res.json();
-      setTopicList(data.topics || topicListFallback);
+      setTopicList(data.topics?.length ? data.topics : fallback);
     } catch (e) {
-      setTopicList(topicListFallback);
+      setTopicList(fallback);
+    } finally {
+      setTopicsLoading(false);
     }
   };
 
@@ -3412,6 +3410,11 @@ function SubjectPage({ profile, onHome }) {
                 </button>
               ))}
             </div>
+            {topicsLoading && (
+              <div style={{ textAlign:"center", fontSize:"11px", color:"var(--text-secondary)", marginTop:"8px", opacity:0.6 }}>
+                ✨ Loading personalised topics…
+              </div>
+            )}
           )}
         </div>
       )}
