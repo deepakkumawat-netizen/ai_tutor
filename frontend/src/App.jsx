@@ -3963,48 +3963,51 @@ function SubjectPage({ profile, onHome }) {
                       </button>
                     </div>
 
-                    {/* Related Topics (Voyage AI semantic search) */}
-                    {!msg.streaming && relatedTopics.length > 0 && (
-                      <div style={{ marginTop:"16px", paddingTop:"14px", borderTop:`1px solid rgba(57,154,255,0.2)` }}>
-                        <div style={{ fontSize:"13px", fontWeight:"700", color:"var(--text-secondary)", marginBottom:"10px", letterSpacing:"0.5px" }}>
-                          🔗 Related Topics
-                        </div>
-                        <div style={{ display:"flex", flexWrap:"wrap", gap:"8px" }}>
-                          {relatedTopics.map((rt, i) => (
-                            <button
-                              key={i}
-                              onClick={() => chooseTopic(rt)}
-                              style={{
-                                padding:"6px 14px",
-                                background:"rgba(57,154,255,0.1)",
-                                border:`1px solid rgba(57,154,255,0.3)`,
-                                borderRadius:"20px",
-                                color:BLUE,
-                                fontSize:"13px",
-                                fontWeight:"600",
-                                cursor:"pointer",
-                                transition:"all 0.2s"
-                              }}
-                              onMouseEnter={(e) => {
-                                e.currentTarget.style.background = BLUE;
-                                e.currentTarget.style.color = "#fff";
-                              }}
-                              onMouseLeave={(e) => {
-                                e.currentTarget.style.background = "rgba(57,154,255,0.1)";
-                                e.currentTarget.style.color = BLUE;
-                              }}
-                            >
-                              {rt}
-                            </button>
-                          ))}
-                        </div>
-                      </div>
-                    )}
                   </div>
                 ) : (
                   // Fallback plain text for practice questions / follow-up answers
                   <div style={{ padding:"14px 18px", color:"var(--text-primary)", fontSize:"15px", lineHeight:"1.6", ...getMessageStyles() }}>
                     {formatContentForGrade(msg.content)}
+                  </div>
+                )}
+
+                {/* Related Topics — outside sections block so it always shows */}
+                {msg.role === "bot" && !msg.streaming && relatedTopics.length > 0 && (
+                  <div style={{ padding:"0 20px 16px 20px" }}>
+                    <div style={{ borderTop:`1px solid rgba(57,154,255,0.2)`, paddingTop:"14px" }}>
+                      <div style={{ fontSize:"13px", fontWeight:"700", color:"var(--text-secondary)", marginBottom:"10px", letterSpacing:"0.5px" }}>
+                        🔗 Related Topics
+                      </div>
+                      <div style={{ display:"flex", flexWrap:"wrap", gap:"8px" }}>
+                        {relatedTopics.map((rt, i) => (
+                          <button
+                            key={i}
+                            onClick={() => chooseTopic(rt)}
+                            style={{
+                              padding:"6px 14px",
+                              background:"rgba(57,154,255,0.1)",
+                              border:`1px solid rgba(57,154,255,0.3)`,
+                              borderRadius:"20px",
+                              color:BLUE,
+                              fontSize:"13px",
+                              fontWeight:"600",
+                              cursor:"pointer",
+                              transition:"all 0.2s"
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = BLUE;
+                              e.currentTarget.style.color = "#fff";
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = "rgba(57,154,255,0.1)";
+                              e.currentTarget.style.color = BLUE;
+                            }}
+                          >
+                            {rt}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>
