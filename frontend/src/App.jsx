@@ -2258,6 +2258,7 @@ function SubjectPage({ profile, onHome }) {
   // NEW: Search, sidebar, voice state, subject switching
   const [searchQuery, setSearchQuery] = useState("");
   const [filteredTopics, setFilteredTopics] = useState([]);
+  const [relatedTopics, setRelatedTopics] = useState([]);
   const [sidebarSearchQuery, setSidebarSearchQuery] = useState("");
   const [showSidebar, setShowSidebar] = useState(false);
   const [speakerEnabled, setSpeakerEnabled] = useState(true);
@@ -2465,13 +2466,36 @@ function SubjectPage({ profile, onHome }) {
     }
   };
 
-  // NEW: Filter topics when search query changes
+  // Semantic search: use Voyage AI when query >= 3 chars, else simple filter
   useEffect(() => {
-    const filtered = topicList.filter(topic =>
-      topic.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-    setFilteredTopics(filtered);
-  }, [searchQuery, topicList]);
+    if (!searchQuery.trim()) {
+      setFilteredTopics([]);
+      return;
+    }
+    if (searchQuery.length < 3) {
+      setFilteredTopics(topicList.filter(t => t.toLowerCase().includes(searchQuery.toLowerCase())));
+      return;
+    }
+    const subjectToQuery = activeSubject === "custom" ? profile.subjectLabel : activeSubject;
+    const timer = setTimeout(async () => {
+      try {
+        const res = await fetch(`${API}/api/semantic/search`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query: searchQuery, subject: subjectToQuery, grade: profile.grade, top_k: 8 })
+        });
+        const data = await res.json();
+        if (data.success && data.results?.length) {
+          setFilteredTopics(data.results.map(r => r.topic));
+        } else {
+          setFilteredTopics(topicList.filter(t => t.toLowerCase().includes(searchQuery.toLowerCase())));
+        }
+      } catch {
+        setFilteredTopics(topicList.filter(t => t.toLowerCase().includes(searchQuery.toLowerCase())));
+      }
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery, topicList, activeSubject, profile.subjectLabel, profile.grade]);
 
   // NEW: Load topics when active subject changes
   useEffect(() => {
@@ -2492,7 +2516,14 @@ function SubjectPage({ profile, onHome }) {
         }
         const data = await res.json();
         console.log("Topics loaded:", data.topics?.length, "topics");
-        setTopicList(data.topics || topicListFallback);
+        const topics = data.topics || topicListFallback;
+        setTopicList(topics);
+        // Background: embed topics for semantic search (only sends new ones)
+        fetch(`${API}/api/semantic/embed-topics`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ subject: subjectToQuery, grade: profile.grade, topics })
+        }).catch(() => {});
       } catch (e) {
         console.error("Error loading topics:", e);
         setTopicList(topicListFallback);
@@ -2655,6 +2686,7 @@ function SubjectPage({ profile, onHome }) {
   const chooseTopic = (topic) => {
     setActiveTopic(topic);
     setShowTopicMenu(false);
+    setRelatedTopics([]);
     setMessages([{ role: "bot", topic, content: "", sections: null, streaming: true }]);
     setLoading(false);
     setVoiceState("idle");
@@ -2702,6 +2734,22 @@ function SubjectPage({ profile, onHome }) {
         // Streaming done — parse sections so formatted layout renders
         const sections = parseSections(accumulated);
         setMessages([{ role: 'bot', topic, content: accumulated, sections, streaming: false }]);
+
+        // Load related topics via Voyage AI semantic search
+        const subjectForRelated = activeSubject === "custom" ? profile.subjectLabel : activeSubject;
+        try {
+          const relRes = await fetch(`${API}/api/semantic/related`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ query: topic, subject: subjectForRelated, grade: profile.grade, top_k: 4 })
+          });
+          const relData = await relRes.json();
+          if (relData.success && relData.results?.length) {
+            setRelatedTopics(relData.results.map(r => r.topic));
+          } else {
+            setRelatedTopics([]);
+          }
+        } catch { setRelatedTopics([]); }
 
         const studentId = profile.grade || "student";
         // Increment usage
@@ -3894,6 +3942,44 @@ function SubjectPage({ profile, onHome }) {
                         {voiceState === "speaking" ? "⏹️ Stop" : "🔊 Hear Explanation"}
                       </button>
                     </div>
+
+                    {/* Related Topics (Voyage AI semantic search) */}
+                    {!msg.streaming && relatedTopics.length > 0 && (
+                      <div style={{ marginTop:"16px", paddingTop:"14px", borderTop:`1px solid rgba(57,154,255,0.2)` }}>
+                        <div style={{ fontSize:"13px", fontWeight:"700", color:"var(--text-secondary)", marginBottom:"10px", letterSpacing:"0.5px" }}>
+                          🔗 Related Topics
+                        </div>
+                        <div style={{ display:"flex", flexWrap:"wrap", gap:"8px" }}>
+                          {relatedTopics.map((rt, i) => (
+                            <button
+                              key={i}
+                              onClick={() => chooseTopic(rt)}
+                              style={{
+                                padding:"6px 14px",
+                                background:"rgba(57,154,255,0.1)",
+                                border:`1px solid rgba(57,154,255,0.3)`,
+                                borderRadius:"20px",
+                                color:BLUE,
+                                fontSize:"13px",
+                                fontWeight:"600",
+                                cursor:"pointer",
+                                transition:"all 0.2s"
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = BLUE;
+                                e.currentTarget.style.color = "#fff";
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = "rgba(57,154,255,0.1)";
+                                e.currentTarget.style.color = BLUE;
+                              }}
+                            >
+                              {rt}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   // Fallback to plain text (for practice questions, etc.)

@@ -53,6 +53,19 @@ class TutorDatabase:
             )
         ''')
 
+        # Topic embeddings table for Voyage AI semantic search
+        c.execute('''
+            CREATE TABLE IF NOT EXISTS topic_embeddings (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                subject TEXT NOT NULL,
+                grade TEXT NOT NULL,
+                topic TEXT NOT NULL,
+                embedding TEXT NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(subject, grade, topic)
+            )
+        ''')
+
         conn.commit()
         conn.close()
         print("[DB] Database initialized")
@@ -204,6 +217,45 @@ class TutorDatabase:
         conn.close()
 
         return deleted_count
+
+    def save_topic_embedding(self, subject: str, grade: str, topic: str, embedding: list) -> None:
+        """Save or update a topic's embedding vector."""
+        conn = sqlite3.connect(self.db_path)
+        c = conn.cursor()
+        c.execute('''
+            INSERT INTO topic_embeddings (subject, grade, topic, embedding)
+            VALUES (?, ?, ?, ?)
+            ON CONFLICT(subject, grade, topic) DO UPDATE SET
+                embedding = excluded.embedding,
+                created_at = CURRENT_TIMESTAMP
+        ''', (subject, grade, topic, json.dumps(embedding)))
+        conn.commit()
+        conn.close()
+
+    def get_topic_embeddings(self, subject: str, grade: str) -> list:
+        """Return all stored embeddings for a subject+grade combo."""
+        conn = sqlite3.connect(self.db_path)
+        c = conn.cursor()
+        c.execute('''
+            SELECT topic, embedding FROM topic_embeddings
+            WHERE subject = ? AND grade = ?
+        ''', (subject, grade))
+        rows = c.fetchall()
+        conn.close()
+        return [{"topic": row[0], "embedding": json.loads(row[1])} for row in rows]
+
+    def get_all_embeddings(self) -> list:
+        """Return every stored embedding (used for cross-subject recommendations)."""
+        conn = sqlite3.connect(self.db_path)
+        c = conn.cursor()
+        c.execute('SELECT subject, grade, topic, embedding FROM topic_embeddings')
+        rows = c.fetchall()
+        conn.close()
+        return [
+            {"subject": r[0], "grade": r[1], "topic": r[2], "embedding": json.loads(r[3])}
+            for r in rows
+        ]
+
 
 # Create global database instance
 db = TutorDatabase()

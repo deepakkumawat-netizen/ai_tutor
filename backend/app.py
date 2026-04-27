@@ -21,6 +21,7 @@ from typing import Optional
 from pydantic import BaseModel
 from mcp_server import get_topics, explain_topic, explain_topic_stream, practice_question, get_educational_videos, quick_answer, TOOLS
 from nlp_engine import nlp_engine
+import voyage_service
 
 # Import database with explicit error handling
 try:
@@ -397,6 +398,100 @@ async def generate_adaptive_response(request: NLPAnalysisRequest):
     except Exception as e:
         print(f"[ERROR] Adaptive response generation failed: {e}")
         return {"success": False, "error": str(e), "adaptive": None}
+
+# ═══════════════════════════════════════════════════════════════════════════
+# VOYAGE AI SEMANTIC SEARCH ENDPOINTS
+# ═══════════════════════════════════════════════════════════════════════════
+
+class SemanticSearchRequest(BaseModel):
+    query: str
+    subject: str
+    grade: str
+    top_k: int = 5
+
+class EmbedTopicsRequest(BaseModel):
+    subject: str
+    grade: str
+    topics: list[str]
+
+class RecommendRequest(BaseModel):
+    subject: str
+    grade: str
+    recent_topics: list[str]
+    top_k: int = 5
+
+@app.post("/api/semantic/embed-topics")
+async def embed_topics(request: EmbedTopicsRequest):
+    """Embed a list of topics and store in DB. Call once when topics load."""
+    if not voyage_service.is_configured():
+        return {"success": False, "error": "Voyage AI not configured"}
+    try:
+        existing = {row["topic"] for row in db.get_topic_embeddings(request.subject, request.grade)}
+        new_topics = [t for t in request.topics if t not in existing]
+        if new_topics:
+            embeddings = voyage_service.embed_batch(new_topics)
+            for topic, emb in zip(new_topics, embeddings):
+                db.save_topic_embedding(request.subject, request.grade, topic, emb)
+        return {"success": True, "embedded": len(new_topics), "total": len(request.topics)}
+    except Exception as e:
+        print(f"[ERROR] embed_topics: {e}")
+        return {"success": False, "error": str(e)}
+
+@app.post("/api/semantic/search")
+async def semantic_search(request: SemanticSearchRequest):
+    """Find topics semantically similar to a free-text query."""
+    if not voyage_service.is_configured():
+        return {"success": False, "results": []}
+    try:
+        candidates = db.get_topic_embeddings(request.subject, request.grade)
+        if not candidates:
+            return {"success": True, "results": [], "message": "No embeddings yet"}
+        query_emb = voyage_service.embed_text(request.query)
+        results = voyage_service.rank_by_similarity(query_emb, candidates, top_k=request.top_k)
+        return {"success": True, "results": [{"topic": r["topic"], "score": r["score"]} for r in results]}
+    except Exception as e:
+        print(f"[ERROR] semantic_search: {e}")
+        return {"success": False, "error": str(e), "results": []}
+
+@app.post("/api/semantic/related")
+async def related_topics(request: SemanticSearchRequest):
+    """Find topics related to the query topic within same subject+grade."""
+    if not voyage_service.is_configured():
+        return {"success": False, "results": []}
+    try:
+        candidates = db.get_topic_embeddings(request.subject, request.grade)
+        candidates = [c for c in candidates if c["topic"].lower() != request.query.lower()]
+        if not candidates:
+            return {"success": True, "results": []}
+        query_emb = voyage_service.embed_text(request.query)
+        results = voyage_service.rank_by_similarity(query_emb, candidates, top_k=request.top_k, min_score=0.5)
+        return {"success": True, "results": [{"topic": r["topic"], "score": r["score"]} for r in results]}
+    except Exception as e:
+        print(f"[ERROR] related_topics: {e}")
+        return {"success": False, "error": str(e), "results": []}
+
+@app.post("/api/semantic/recommend")
+async def recommend_topics(request: RecommendRequest):
+    """Recommend next topics based on what the student recently studied."""
+    if not voyage_service.is_configured():
+        return {"success": False, "results": []}
+    try:
+        all_candidates = db.get_all_embeddings()
+        studied = {t.lower() for t in request.recent_topics}
+        candidates = [c for c in all_candidates if c["topic"].lower() not in studied]
+        if not candidates or not request.recent_topics:
+            return {"success": True, "results": []}
+        query_text = " ".join(request.recent_topics[-3:])
+        query_emb = voyage_service.embed_text(query_text)
+        results = voyage_service.rank_by_similarity(query_emb, candidates, top_k=request.top_k, min_score=0.4)
+        return {
+            "success": True,
+            "results": [{"topic": r["topic"], "subject": r.get("subject"), "score": r["score"]} for r in results]
+        }
+    except Exception as e:
+        print(f"[ERROR] recommend_topics: {e}")
+        return {"success": False, "error": str(e), "results": []}
+
 
 # ═══════════════════════════════════════════════════════════════════════════
 # SERVE FRONTEND
