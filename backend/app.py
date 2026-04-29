@@ -87,6 +87,18 @@ class GetTopicsRequest(BaseModel):
     subject: str
     grade: str
 
+class FlashcardRequest(BaseModel):
+    topic: str
+    grade: str
+    subject: str
+    num_cards: int = 8
+
+class PracticeTestRequest(BaseModel):
+    topic: str
+    grade: str
+    subject: str
+    num_questions: int = 5
+
 class ExplainTopicRequest(BaseModel):
     topic: str
     grade: str
@@ -180,6 +192,78 @@ async def api_explain_topic_stream(request: ExplainTopicRequest):
 async def api_practice_question(request: PracticeQuestionRequest):
     """Generate a practice question"""
     return practice_question(request.subject, request.grade)
+
+# ═══════════════════════════════════════════════════════════════════════════
+# FLASHCARDS & PRACTICE TEST
+# ═══════════════════════════════════════════════════════════════════════════
+
+@app.post("/api/flashcards")
+async def generate_flashcards(request: FlashcardRequest):
+    """Generate flashcards for a topic"""
+    from mcp_server import client as openai_client
+    try:
+        resp = openai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{
+                "role": "system",
+                "content": "You are an expert teacher creating flashcards. Return ONLY valid JSON, no markdown."
+            }, {
+                "role": "user",
+                "content": (
+                    f"Create {request.num_cards} flashcards for '{request.topic}' "
+                    f"({request.subject}, {request.grade}).\n"
+                    "Each flashcard: front = key term/question, back = clear definition/answer (1-2 sentences).\n"
+                    'Return JSON: {"flashcards": [{"front": "...", "back": "..."}]}'
+                )
+            }],
+            temperature=0.7,
+            max_tokens=1200,
+        )
+        import json
+        raw = resp.choices[0].message.content.strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        data = json.loads(raw)
+        return {"success": True, "flashcards": data["flashcards"], "topic": request.topic}
+    except Exception as e:
+        print(f"[ERROR] flashcards: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+@app.post("/api/practice-test")
+async def generate_practice_test(request: PracticeTestRequest):
+    """Generate a multi-question practice test"""
+    from mcp_server import client as openai_client
+    try:
+        resp = openai_client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{
+                "role": "system",
+                "content": "You are an expert teacher creating multiple-choice tests. Return ONLY valid JSON, no markdown."
+            }, {
+                "role": "user",
+                "content": (
+                    f"Create {request.num_questions} multiple-choice questions for '{request.topic}' "
+                    f"({request.subject}, {request.grade}).\n"
+                    "Each question: 4 options labeled A/B/C/D, one correct answer, brief explanation.\n"
+                    'Return JSON: {"questions": [{"question":"...","options":["A) ...","B) ...","C) ...","D) ..."],"correct":"A","explanation":"..."}]}'
+                )
+            }],
+            temperature=0.7,
+            max_tokens=1800,
+        )
+        import json
+        raw = resp.choices[0].message.content.strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+        data = json.loads(raw)
+        return {"success": True, "questions": data["questions"], "topic": request.topic}
+    except Exception as e:
+        print(f"[ERROR] practice-test: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # ═══════════════════════════════════════════════════════════════════════════
 # YOUTUBE VIDEO SEARCH

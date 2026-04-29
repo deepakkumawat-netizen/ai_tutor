@@ -2229,6 +2229,390 @@ async function fetchLessonScript(subject, subjectLabel, topic, grade, level) {
 }
 
 
+// ─── FLASHCARD VIEW ──────────────────────────────────────────────────────────
+function FlashcardView({ topic, grade, subject, apiUrl }) {
+  const [cards, setCards] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [idx, setIdx] = useState(0);
+  const [flipped, setFlipped] = useState(false);
+  const [done, setDone] = useState(new Set());
+
+  useEffect(() => {
+    if (topic) loadCards();
+  }, [topic]);
+
+  const loadCards = async () => {
+    setLoading(true); setCards([]); setIdx(0); setFlipped(false); setDone(new Set());
+    try {
+      const res = await fetch(`${apiUrl}/api/flashcards`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topic, grade, subject, num_cards: 8 }),
+      });
+      const data = await res.json();
+      if (data.flashcards) setCards(data.flashcards);
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  };
+
+  const next = () => { setDone(d => new Set([...d, idx])); setFlipped(false); setTimeout(() => setIdx(i => Math.min(i+1, cards.length-1)), 150); };
+  const prev = () => { setFlipped(false); setTimeout(() => setIdx(i => Math.max(i-1, 0)), 150); };
+  const reset = () => { setIdx(0); setFlipped(false); setDone(new Set()); };
+
+  if (!topic) return (
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:"100%", color:"var(--text-secondary)" }}>
+      <div style={{ fontSize:"48px", marginBottom:"12px" }}>📇</div>
+      <div style={{ fontSize:"18px", fontWeight:"600" }}>Select a topic to generate flashcards</div>
+    </div>
+  );
+
+  if (loading) return (
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:"100%", color:"var(--text-secondary)" }}>
+      <div style={{ width:40, height:40, border:"3px solid rgba(57,154,255,0.3)", borderTopColor:BLUE, borderRadius:"50%", animation:"spin 0.7s linear infinite", marginBottom:16 }}/>
+      <div style={{ fontWeight:"600" }}>Generating flashcards…</div>
+    </div>
+  );
+
+  if (!cards.length) return null;
+
+  const card = cards[idx];
+  const progress = (done.size / cards.length) * 100;
+
+  return (
+    <div style={{ padding:"24px", maxWidth:600, margin:"0 auto", display:"flex", flexDirection:"column", gap:20, height:"100%", overflowY:"auto" }}>
+      {/* Header */}
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <div>
+          <div style={{ fontSize:"18px", fontWeight:"700", color:"var(--text-primary)" }}>📇 Flashcards — {topic}</div>
+          <div style={{ fontSize:"13px", color:"var(--text-secondary)" }}>{idx+1} of {cards.length} • {done.size} reviewed</div>
+        </div>
+        <button onClick={loadCards} style={{ background:"transparent", border:`1.5px solid ${BLUE}`, borderRadius:10, padding:"6px 14px", color:BLUE, fontWeight:"600", fontSize:"13px", cursor:"pointer" }}>↺ Regenerate</button>
+      </div>
+
+      {/* Progress bar */}
+      <div style={{ height:6, background:"var(--bg-tertiary)", borderRadius:99 }}>
+        <div style={{ height:"100%", width:`${progress}%`, background:BLUE, borderRadius:99, transition:"width 0.4s" }}/>
+      </div>
+
+      {/* Flip card */}
+      <div onClick={() => setFlipped(f => !f)} style={{ flex:1, minHeight:220, maxHeight:300, cursor:"pointer", perspective:1000 }}>
+        <div style={{
+          width:"100%", height:"100%", position:"relative", transformStyle:"preserve-3d",
+          transition:"transform 0.5s", transform: flipped ? "rotateY(180deg)" : "rotateY(0deg)",
+        }}>
+          {/* Front */}
+          <div style={{
+            position:"absolute", inset:0, backfaceVisibility:"hidden",
+            background:"linear-gradient(135deg,rgba(57,154,255,0.15),rgba(57,154,255,0.05))",
+            border:`2px solid ${BLUE}`, borderRadius:18,
+            display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:32, textAlign:"center",
+          }}>
+            <div style={{ fontSize:"11px", fontWeight:"700", color:BLUE, textTransform:"uppercase", letterSpacing:"1px", marginBottom:16 }}>Term / Question</div>
+            <div style={{ fontSize:"20px", fontWeight:"700", color:"var(--text-primary)", lineHeight:1.4 }}>{card.front}</div>
+            <div style={{ marginTop:20, fontSize:"12px", color:"var(--text-secondary)" }}>Tap to reveal answer</div>
+          </div>
+          {/* Back */}
+          <div style={{
+            position:"absolute", inset:0, backfaceVisibility:"hidden", transform:"rotateY(180deg)",
+            background:"linear-gradient(135deg,rgba(34,197,94,0.12),rgba(34,197,94,0.04))",
+            border:"2px solid #22c55e", borderRadius:18,
+            display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:32, textAlign:"center",
+          }}>
+            <div style={{ fontSize:"11px", fontWeight:"700", color:"#22c55e", textTransform:"uppercase", letterSpacing:"1px", marginBottom:16 }}>Answer</div>
+            <div style={{ fontSize:"17px", fontWeight:"600", color:"var(--text-primary)", lineHeight:1.5 }}>{card.back}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Controls */}
+      <div style={{ display:"flex", gap:12, justifyContent:"center" }}>
+        <button onClick={prev} disabled={idx===0} style={{ padding:"10px 24px", borderRadius:12, border:`1.5px solid ${BLUE}`, background:"transparent", color:BLUE, fontWeight:"600", fontSize:"14px", cursor:idx===0?"not-allowed":"pointer", opacity:idx===0?0.4:1 }}>← Prev</button>
+        {idx < cards.length-1
+          ? <button onClick={next} style={{ padding:"10px 28px", borderRadius:12, border:"none", background:BLUE, color:"white", fontWeight:"700", fontSize:"14px", cursor:"pointer" }}>Got it →</button>
+          : <button onClick={reset} style={{ padding:"10px 28px", borderRadius:12, border:"none", background:"#22c55e", color:"white", fontWeight:"700", fontSize:"14px", cursor:"pointer" }}>↺ Start Over</button>
+        }
+      </div>
+
+      {/* Card dots */}
+      <div style={{ display:"flex", gap:6, justifyContent:"center", flexWrap:"wrap" }}>
+        {cards.map((_, i) => (
+          <div key={i} onClick={() => { setIdx(i); setFlipped(false); }} style={{
+            width:10, height:10, borderRadius:"50%", cursor:"pointer",
+            background: done.has(i) ? "#22c55e" : i===idx ? BLUE : "var(--bg-tertiary)",
+            transition:"background 0.3s",
+          }}/>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+// ─── PRACTICE TEST VIEW ───────────────────────────────────────────────────────
+function PracticeTestView({ topic, grade, subject, apiUrl, onScoreSave }) {
+  const [questions, setQuestions] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [qIdx, setQIdx] = useState(0);
+  const [selected, setSelected] = useState(null);
+  const [answered, setAnswered] = useState(false);
+  const [scores, setScores] = useState([]);
+  const [done, setDone] = useState(false);
+
+  useEffect(() => {
+    if (topic) loadTest();
+  }, [topic]);
+
+  const loadTest = async () => {
+    setLoading(true); setQuestions([]); setQIdx(0); setSelected(null); setAnswered(false); setScores([]); setDone(false);
+    try {
+      const res = await fetch(`${apiUrl}/api/practice-test`, {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ topic, grade, subject, num_questions: 5 }),
+      });
+      const data = await res.json();
+      if (data.questions) setQuestions(data.questions);
+    } catch (e) { console.error(e); }
+    finally { setLoading(false); }
+  };
+
+  const answer = (opt) => {
+    if (answered) return;
+    setSelected(opt);
+    setAnswered(true);
+    const isCorrect = opt[0] === questions[qIdx].correct;
+    setScores(s => [...s, isCorrect]);
+  };
+
+  const nextQ = () => {
+    if (qIdx + 1 >= questions.length) {
+      setDone(true);
+      const finalScores = [...scores];
+      const pct = Math.round((finalScores.filter(Boolean).length / finalScores.length) * 100);
+      onScoreSave?.({ topic, score: pct, date: new Date().toLocaleDateString() });
+    } else {
+      setQIdx(i => i+1); setSelected(null); setAnswered(false);
+    }
+  };
+
+  const OPTS = { A: "#3b82f6", B: "#10b981", C: "#f59e0b", D: "#ef4444" };
+
+  if (!topic) return (
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:"100%", color:"var(--text-secondary)" }}>
+      <div style={{ fontSize:"48px", marginBottom:"12px" }}>📝</div>
+      <div style={{ fontSize:"18px", fontWeight:"600" }}>Select a topic to start a practice test</div>
+    </div>
+  );
+
+  if (loading) return (
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", height:"100%", color:"var(--text-secondary)" }}>
+      <div style={{ width:40, height:40, border:"3px solid rgba(57,154,255,0.3)", borderTopColor:BLUE, borderRadius:"50%", animation:"spin 0.7s linear infinite", marginBottom:16 }}/>
+      <div style={{ fontWeight:"600" }}>Generating practice test…</div>
+    </div>
+  );
+
+  if (!questions.length) return null;
+
+  if (done) {
+    const correct = scores.filter(Boolean).length;
+    const pct = Math.round((correct / questions.length) * 100);
+    const emoji = pct >= 90 ? "🏆" : pct >= 70 ? "🎉" : pct >= 50 ? "👍" : "📚";
+    return (
+      <div style={{ padding:"32px 24px", maxWidth:520, margin:"0 auto", textAlign:"center", display:"flex", flexDirection:"column", alignItems:"center", gap:20 }}>
+        <div style={{ fontSize:"64px" }}>{emoji}</div>
+        <div style={{ fontSize:"24px", fontWeight:"800", color:"var(--text-primary)" }}>Test Complete!</div>
+        <div style={{ fontSize:"52px", fontWeight:"800", color: pct>=70?BLUE:"#f59e0b" }}>{pct}%</div>
+        <div style={{ fontSize:"16px", color:"var(--text-secondary)", fontWeight:"600" }}>{correct} / {questions.length} correct on <em>{topic}</em></div>
+        <div style={{ width:"100%", height:12, background:"var(--bg-tertiary)", borderRadius:99 }}>
+          <div style={{ height:"100%", width:`${pct}%`, background:pct>=70?BLUE:"#f59e0b", borderRadius:99, transition:"width 1s" }}/>
+        </div>
+        <div style={{ display:"flex", gap:12, marginTop:8 }}>
+          <button onClick={loadTest} style={{ padding:"12px 28px", borderRadius:14, border:"none", background:BLUE, color:"white", fontWeight:"700", fontSize:"15px", cursor:"pointer" }}>↺ Try Again</button>
+        </div>
+        {/* Answer review */}
+        <div style={{ width:"100%", textAlign:"left", marginTop:8 }}>
+          <div style={{ fontWeight:"700", fontSize:"14px", color:"var(--text-secondary)", marginBottom:12 }}>REVIEW</div>
+          {questions.map((q, i) => (
+            <div key={i} style={{ marginBottom:12, padding:"12px 16px", borderRadius:12, background:scores[i]?"rgba(34,197,94,0.08)":"rgba(239,68,68,0.08)", border:`1.5px solid ${scores[i]?"#22c55e":"#ef4444"}` }}>
+              <div style={{ fontWeight:"600", fontSize:"13px", color:"var(--text-primary)", marginBottom:4 }}>{i+1}. {q.question}</div>
+              <div style={{ fontSize:"12px", color:scores[i]?"#22c55e":"#ef4444", fontWeight:"600" }}>
+                {scores[i] ? "✓ Correct" : `✗ Correct: ${q.correct}`}
+              </div>
+              <div style={{ fontSize:"12px", color:"var(--text-secondary)", marginTop:4 }}>{q.explanation}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const q = questions[qIdx];
+  const progress = ((qIdx) / questions.length) * 100;
+
+  return (
+    <div style={{ padding:"24px", maxWidth:600, margin:"0 auto", display:"flex", flexDirection:"column", gap:20, height:"100%", overflowY:"auto" }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        <div style={{ fontSize:"17px", fontWeight:"700", color:"var(--text-primary)" }}>📝 Practice Test — {topic}</div>
+        <div style={{ fontSize:"13px", color:"var(--text-secondary)", fontWeight:"600" }}>Q{qIdx+1} of {questions.length}</div>
+      </div>
+      <div style={{ height:6, background:"var(--bg-tertiary)", borderRadius:99 }}>
+        <div style={{ height:"100%", width:`${progress}%`, background:BLUE, borderRadius:99, transition:"width 0.4s" }}/>
+      </div>
+      <div style={{ background:"var(--bg-secondary)", borderRadius:16, padding:"20px 24px", border:`1.5px solid rgba(57,154,255,0.2)` }}>
+        <div style={{ fontSize:"17px", fontWeight:"700", color:"var(--text-primary)", lineHeight:1.5 }}>{q.question}</div>
+      </div>
+      <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+        {q.options.map((opt) => {
+          const letter = opt[0];
+          const isSelected = selected === opt;
+          const isCorrect = answered && letter === q.correct;
+          const isWrong = answered && isSelected && letter !== q.correct;
+          return (
+            <button key={opt} onClick={() => answer(opt)} disabled={answered} style={{
+              padding:"14px 18px", borderRadius:12, border:`2px solid ${isCorrect?"#22c55e":isWrong?"#ef4444":answered?"var(--border-color)":OPTS[letter]+"66"}`,
+              background: isCorrect?"rgba(34,197,94,0.1)":isWrong?"rgba(239,68,68,0.1)":"var(--bg-secondary)",
+              color:"var(--text-primary)", fontWeight:"600", fontSize:"15px", cursor:answered?"default":"pointer",
+              textAlign:"left", transition:"all 0.2s", transform: isSelected?"scale(1.01)":"scale(1)",
+            }}>
+              <span style={{ fontWeight:"800", color:isCorrect?"#22c55e":isWrong?"#ef4444":OPTS[letter], marginRight:10 }}>{letter}</span>
+              {opt.slice(3)}
+            </button>
+          );
+        })}
+      </div>
+      {answered && (
+        <div style={{ padding:"14px 18px", borderRadius:12, background:"rgba(57,154,255,0.08)", border:`1.5px solid rgba(57,154,255,0.3)` }}>
+          <div style={{ fontSize:"13px", fontWeight:"700", color:BLUE, marginBottom:4 }}>{selected?.[0]===q.correct?"✓ Correct!":"✗ Incorrect"}</div>
+          <div style={{ fontSize:"13px", color:"var(--text-secondary)" }}>{q.explanation}</div>
+        </div>
+      )}
+      {answered && (
+        <button onClick={nextQ} style={{ padding:"12px", borderRadius:12, border:"none", background:BLUE, color:"white", fontWeight:"700", fontSize:"15px", cursor:"pointer" }}>
+          {qIdx+1 >= questions.length ? "See Results" : "Next Question →"}
+        </button>
+      )}
+    </div>
+  );
+}
+
+// ─── PROGRESS VIEW ────────────────────────────────────────────────────────────
+function ProgressView({ subject, grade }) {
+  const key = "ai_tutor_progress_v2";
+  const raw = localStorage.getItem(key);
+  const data = raw ? JSON.parse(raw) : { lessons: [], tests: [], streak: 0, lastDate: null };
+
+  const lessons = data.lessons || [];
+  const tests = data.tests || [];
+  const totalLessons = lessons.length;
+  const avgScore = tests.length ? Math.round(tests.reduce((a,t)=>a+t.score,0)/tests.length) : null;
+  const streak = data.streak || 0;
+
+  // Subject distribution
+  const subjectCounts = {};
+  lessons.forEach(l => { subjectCounts[l.subject] = (subjectCounts[l.subject]||0)+1; });
+  const topSubjects = Object.entries(subjectCounts).sort((a,b)=>b[1]-a[1]).slice(0,5);
+  const maxCount = topSubjects[0]?.[1] || 1;
+
+  // Recent test scores
+  const recentTests = tests.slice(-8);
+
+  return (
+    <div style={{ padding:"24px", display:"flex", flexDirection:"column", gap:20, overflowY:"auto", height:"100%" }}>
+      <div style={{ fontSize:"20px", fontWeight:"800", color:"var(--text-primary)" }}>📊 Learning Progress</div>
+
+      {/* Stats row */}
+      <div style={{ display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:14 }}>
+        {[
+          { label:"Lessons", value: totalLessons, icon:"📚", color:BLUE },
+          { label:"Tests Taken", value: tests.length, icon:"📝", color:"#22c55e" },
+          { label:"Avg Score", value: avgScore!=null?`${avgScore}%`:"—", icon:"🏆", color:"#f59e0b" },
+          { label:"Day Streak", value: streak, icon:"🔥", color:"#ef4444" },
+          { label:"Topics", value: [...new Set(lessons.map(l=>l.topic))].length, icon:"🎯", color:"#8b5cf6" },
+          { label:"Subjects", value: Object.keys(subjectCounts).length, icon:"🔬", color:"#06b6d4" },
+        ].map(s => (
+          <div key={s.label} style={{ background:"var(--bg-secondary)", borderRadius:14, padding:"16px 14px", textAlign:"center", border:`1.5px solid rgba(57,154,255,0.15)` }}>
+            <div style={{ fontSize:"28px", marginBottom:4 }}>{s.icon}</div>
+            <div style={{ fontSize:"22px", fontWeight:"800", color:s.color }}>{s.value}</div>
+            <div style={{ fontSize:"11px", color:"var(--text-secondary)", fontWeight:"600", textTransform:"uppercase", letterSpacing:"0.5px" }}>{s.label}</div>
+          </div>
+        ))}
+      </div>
+
+      {/* Subject bar chart */}
+      {topSubjects.length > 0 && (
+        <div style={{ background:"var(--bg-secondary)", borderRadius:14, padding:"18px 20px", border:`1.5px solid rgba(57,154,255,0.15)` }}>
+          <div style={{ fontWeight:"700", fontSize:"14px", color:"var(--text-secondary)", marginBottom:14, textTransform:"uppercase", letterSpacing:"0.5px" }}>Topics by Subject</div>
+          {topSubjects.map(([subj, count]) => (
+            <div key={subj} style={{ marginBottom:10 }}>
+              <div style={{ display:"flex", justifyContent:"space-between", fontSize:"13px", fontWeight:"600", color:"var(--text-primary)", marginBottom:4 }}>
+                <span>{subj}</span><span>{count}</span>
+              </div>
+              <div style={{ height:8, background:"var(--bg-tertiary)", borderRadius:99 }}>
+                <div style={{ height:"100%", width:`${(count/maxCount)*100}%`, background:BLUE, borderRadius:99, transition:"width 1s" }}/>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Recent test scores */}
+      {recentTests.length > 0 && (
+        <div style={{ background:"var(--bg-secondary)", borderRadius:14, padding:"18px 20px", border:`1.5px solid rgba(57,154,255,0.15)` }}>
+          <div style={{ fontWeight:"700", fontSize:"14px", color:"var(--text-secondary)", marginBottom:14, textTransform:"uppercase", letterSpacing:"0.5px" }}>Recent Test Scores</div>
+          <div style={{ display:"flex", alignItems:"flex-end", gap:8, height:80 }}>
+            {recentTests.map((t, i) => (
+              <div key={i} style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", gap:4 }} title={`${t.topic}: ${t.score}%`}>
+                <div style={{ width:"100%", background:t.score>=70?BLUE:"#f59e0b", borderRadius:"4px 4px 0 0", height:`${(t.score/100)*70}px`, minHeight:4 }}/>
+                <div style={{ fontSize:"10px", fontWeight:"700", color:"var(--text-secondary)" }}>{t.score}%</div>
+              </div>
+            ))}
+          </div>
+          <div style={{ fontSize:"12px", color:"var(--text-secondary)", marginTop:8, textAlign:"center" }}>Last {recentTests.length} tests</div>
+        </div>
+      )}
+
+      {/* Recent lessons */}
+      {lessons.length > 0 && (
+        <div style={{ background:"var(--bg-secondary)", borderRadius:14, padding:"18px 20px", border:`1.5px solid rgba(57,154,255,0.15)` }}>
+          <div style={{ fontWeight:"700", fontSize:"14px", color:"var(--text-secondary)", marginBottom:12, textTransform:"uppercase", letterSpacing:"0.5px" }}>Recent Lessons</div>
+          {lessons.slice(-5).reverse().map((l, i) => (
+            <div key={i} style={{ display:"flex", justifyContent:"space-between", padding:"8px 0", borderBottom:i<4?"1px solid var(--border-color)":"none" }}>
+              <span style={{ fontSize:"13px", fontWeight:"600", color:"var(--text-primary)" }}>{l.topic}</span>
+              <span style={{ fontSize:"12px", color:"var(--text-secondary)" }}>{l.date}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {lessons.length === 0 && tests.length === 0 && (
+        <div style={{ textAlign:"center", color:"var(--text-secondary)", padding:"40px 0" }}>
+          <div style={{ fontSize:"48px", marginBottom:12 }}>🌱</div>
+          <div style={{ fontSize:"16px", fontWeight:"600" }}>Start learning to build your progress!</div>
+          <div style={{ fontSize:"13px", marginTop:8 }}>Study topics, take flashcard sessions, and complete practice tests.</div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Persist progress helper (called from SubjectPage on lesson load and test complete)
+function saveProgress(type, payload) {
+  const key = "ai_tutor_progress_v2";
+  const raw = localStorage.getItem(key);
+  const data = raw ? JSON.parse(raw) : { lessons: [], tests: [], streak: 0, lastDate: null };
+
+  const today = new Date().toLocaleDateString();
+  if (data.lastDate !== today) {
+    const yesterday = new Date(Date.now() - 86400000).toLocaleDateString();
+    data.streak = data.lastDate === yesterday ? (data.streak || 0) + 1 : 1;
+    data.lastDate = today;
+  }
+
+  if (type === "lesson") {
+    data.lessons = [...(data.lessons || []), { ...payload, date: today }].slice(-50);
+  } else if (type === "test") {
+    data.tests = [...(data.tests || []), { ...payload, date: today }].slice(-30);
+  }
+  localStorage.setItem(key, JSON.stringify(data));
+}
+
 // ─── SUBJECT / CHAT PAGE ──────────────────────────────────────────────────────
 // ─── Chip emojis for K-3 topic buttons ───────────────────────────────────────
 const CHIP_EMOJIS = ["🌟","📚","🎯","💡","🔍","🎓","✏️","🧩","🚀","🎨","🌈","⭐","🏆","🔬","🌍"];
@@ -2285,7 +2669,7 @@ function SubjectPage({ profile, onHome }) {
   }, [profile.subject]);
 
   // Video view state
-  const [viewMode, setViewMode] = useState("lesson"); // "lesson" or "videos"
+  const [viewMode, setViewMode] = useState("lesson"); // "lesson" | "videos" | "flashcards" | "practice" | "progress"
   const [videoList, setVideoList] = useState([]);
   const [loadingVideos, setLoadingVideos] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState(null); // For modal video player
@@ -2685,6 +3069,7 @@ function SubjectPage({ profile, onHome }) {
     setMessages([{ role: "bot", topic, content: "", sections: null, streaming: true }]);
     setLoading(false);
     setVoiceState("idle");
+    saveProgress("lesson", { topic, subject: activeSubject });
 
     (async () => {
       try {
@@ -3500,42 +3885,25 @@ function SubjectPage({ profile, onHome }) {
 
           <div style={{ display:"flex", gap:"8px", alignItems:"center" }}>
             {/* View Toggle Buttons */}
-            <div style={{ display:"flex", gap:"4px", background:"var(--bg-tertiary)", padding:"4px", borderRadius:"8px" }}>
-              <button
-                onClick={() => { setViewMode("lesson"); }}
-                style={{
-                  padding:"8px 14px",
-                  background:viewMode === "lesson" ? BLUE : "transparent",
-                  color:viewMode === "lesson" ? "white" : "var(--text-secondary)",
-                  border:"none",
-                  borderRadius:"6px",
-                  cursor:"pointer",
-                  fontWeight:"600",
-                  fontSize:"13px",
-                  transition:"all 0.2s"
-                }}
-              >
-                📚 Lesson
-              </button>
-              <button
-                onClick={() => {
-                  setViewMode("videos");
-                  if (videoList.length === 0) fetchVideosForTopic(activeTopic);
-                }}
-                style={{
-                  padding:"8px 14px",
-                  background:viewMode === "videos" ? BLUE : "transparent",
-                  color:viewMode === "videos" ? "white" : "var(--text-secondary)",
-                  border:"none",
-                  borderRadius:"6px",
-                  cursor:"pointer",
-                  fontWeight:"600",
-                  fontSize:"13px",
-                  transition:"all 0.2s"
-                }}
-              >
-                🎬 Videos
-              </button>
+            <div style={{ display:"flex", gap:"4px", background:"var(--bg-tertiary)", padding:"4px", borderRadius:"8px", flexWrap:"wrap" }}>
+              {[
+                { id:"lesson",    label:"📚 Lesson" },
+                { id:"videos",    label:"🎬 Videos",    onClick: () => { if (videoList.length === 0) fetchVideosForTopic(activeTopic); } },
+                { id:"flashcards",label:"📇 Flashcards" },
+                { id:"practice",  label:"📝 Test" },
+                { id:"progress",  label:"📊 Progress" },
+              ].map(tab => (
+                <button key={tab.id}
+                  onClick={() => { setViewMode(tab.id); tab.onClick?.(); }}
+                  style={{
+                    padding:"8px 12px",
+                    background:viewMode === tab.id ? BLUE : "transparent",
+                    color:viewMode === tab.id ? "white" : "var(--text-secondary)",
+                    border:"none", borderRadius:"6px", cursor:"pointer",
+                    fontWeight:"600", fontSize:"12px", transition:"all 0.2s", whiteSpace:"nowrap",
+                  }}
+                >{tab.label}</button>
+              ))}
             </div>
 
             {/* Change Topic Button */}
@@ -3837,6 +4205,24 @@ function SubjectPage({ profile, onHome }) {
               </div>
             )}
           </>
+        )}
+
+        {/* Flashcard View */}
+        {viewMode === "flashcards" && (
+          <FlashcardView topic={activeTopic} grade={profile.grade} subject={activeSubject} apiUrl={API} />
+        )}
+
+        {/* Practice Test View */}
+        {viewMode === "practice" && (
+          <PracticeTestView
+            topic={activeTopic} grade={profile.grade} subject={activeSubject} apiUrl={API}
+            onScoreSave={(payload) => saveProgress("test", payload)}
+          />
+        )}
+
+        {/* Progress View */}
+        {viewMode === "progress" && (
+          <ProgressView subject={activeSubject} grade={profile.grade} />
         )}
 
         {/* Limit Exceeded Message */}
