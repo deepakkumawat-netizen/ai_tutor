@@ -4333,9 +4333,8 @@ function SubjectPage({ profile, onHome }) {
                         <div style={{ fontSize:"14px", fontWeight:"700", color:"var(--text-primary)", marginBottom:"6px" }}>
                           📖 What is it?
                         </div>
-                        <div style={{ fontSize:"14px", lineHeight:"1.6", color:"var(--text-primary)", paddingLeft:"16px", borderLeft:`3px solid ${BLUE}`, ...getMessageStyles() }}>
-                          {formatSectionForGrade(msg.sections.definition)}
-                        </div>
+                        <div style={{ fontSize:"14px", lineHeight:"1.6", color:"var(--text-primary)", paddingLeft:"16px", borderLeft:`3px solid ${BLUE}`, ...getMessageStyles() }}
+                          dangerouslySetInnerHTML={{ __html: formatMessage(formatSectionForGrade(msg.sections.definition)) }} />
                       </div>
                     )}
 
@@ -4345,13 +4344,8 @@ function SubjectPage({ profile, onHome }) {
                         <div style={{ fontSize:"14px", fontWeight:"700", color:"var(--text-primary)", marginBottom:"8px" }}>
                           💡 Key Ideas
                         </div>
-                        <div style={{ fontSize:"14px", lineHeight:"1.7", color:"var(--text-primary)", paddingLeft:"16px", borderLeft:`3px solid ${BLUE}`, ...getMessageStyles() }}>
-                          {formatSectionForGrade(msg.sections.keyPoints).split("\n").map((line, idx) => (
-                            <div key={idx} style={{ marginBottom: idx === formatSectionForGrade(msg.sections.keyPoints).split("\n").length - 1 ? 0 : "6px" }}>
-                              {line}
-                            </div>
-                          ))}
-                        </div>
+                        <div style={{ fontSize:"14px", lineHeight:"1.7", color:"var(--text-primary)", paddingLeft:"16px", borderLeft:`3px solid ${BLUE}`, ...getMessageStyles() }}
+                          dangerouslySetInnerHTML={{ __html: formatMessage(formatSectionForGrade(msg.sections.keyPoints)) }} />
                       </div>
                     )}
 
@@ -4361,9 +4355,8 @@ function SubjectPage({ profile, onHome }) {
                         <div style={{ fontSize:"14px", fontWeight:"700", color:"var(--text-primary)", marginBottom:"6px" }}>
                           🌍 Real-World Example
                         </div>
-                        <div style={{ fontSize:"14px", lineHeight:"1.6", color:"var(--text-primary)", paddingLeft:"16px", borderLeft:`3px solid ${BLUE}`, background:"rgba(57,154,255,0.05)", padding:"12px", borderRadius:"6px", ...getMessageStyles() }}>
-                          {formatSectionForGrade(msg.sections.example)}
-                        </div>
+                        <div style={{ fontSize:"14px", lineHeight:"1.6", color:"var(--text-primary)", paddingLeft:"16px", borderLeft:`3px solid ${BLUE}`, background:"rgba(57,154,255,0.05)", padding:"12px", borderRadius:"6px", ...getMessageStyles() }}
+                          dangerouslySetInnerHTML={{ __html: formatMessage(formatSectionForGrade(msg.sections.example)) }} />
                       </div>
                     )}
 
@@ -4373,9 +4366,8 @@ function SubjectPage({ profile, onHome }) {
                         <div style={{ fontSize:"14px", fontWeight:"700", color:"var(--text-primary)", marginBottom:"6px" }}>
                           ✨ Remember This
                         </div>
-                        <div style={{ fontSize:"14px", fontWeight:"600", lineHeight:"1.6", color:BLUE, paddingLeft:"16px", borderLeft:`3px solid ${BLUE}`, background:"rgba(57,154,255,0.08)", padding:"12px", borderRadius:"6px", ...getMessageStyles() }}>
-                          {formatSectionForGrade(msg.sections.summary)}
-                        </div>
+                        <div style={{ fontSize:"14px", fontWeight:"600", lineHeight:"1.6", color:BLUE, paddingLeft:"16px", borderLeft:`3px solid ${BLUE}`, background:"rgba(57,154,255,0.08)", padding:"12px", borderRadius:"6px", ...getMessageStyles() }}
+                          dangerouslySetInnerHTML={{ __html: formatMessage(formatSectionForGrade(msg.sections.summary)) }} />
                       </div>
                     )}
 

@@ -541,7 +541,17 @@ async def semantic_search(request: SemanticSearchRequest):
 async def related_topics(request: SemanticSearchRequest):
     """Find topics related to the query topic within same subject+grade."""
     if not voyage_service.is_configured():
-        return {"success": False, "results": []}
+        # Voyage not configured — fall back to curriculum topics
+        try:
+            topics_data = get_topics(request.subject, request.grade)
+            all_topics = topics_data.get("topics", [])
+            filtered = [t for t in all_topics if t.lower() != request.query.lower()]
+            query_words = set(request.query.lower().split())
+            filtered.sort(key=lambda t: len(query_words & set(t.lower().split())), reverse=True)
+            results = [{"topic": t, "score": 0.5} for t in filtered[:request.top_k]]
+            return {"success": True, "results": results}
+        except:
+            return {"success": True, "results": []}
     try:
         candidates = db.get_topic_embeddings(request.subject, request.grade)
 
