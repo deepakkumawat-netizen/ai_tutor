@@ -14,9 +14,9 @@ from openai import OpenAI
 load_dotenv()
 
 # Get API key and strip any whitespace/newlines
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-OPENAI_MODEL   = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
-client = OpenAI(api_key=OPENAI_API_KEY)
+api_key = os.getenv("OPENAI_API_KEY", "").strip()
+OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+client = OpenAI(api_key=api_key)
 
 # ═══════════════════════════════════════════════════════════════════════════
 # HARD-CODED LANGUAGE TOPICS
