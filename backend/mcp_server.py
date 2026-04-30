@@ -14,8 +14,9 @@ from openai import OpenAI
 load_dotenv()
 
 # Get API key and strip any whitespace/newlines
-api_key = os.getenv("OPENAI_API_KEY", "").strip()
-client = OpenAI(api_key=api_key)
+OLLAMA_BASE_URL = os.getenv("OLLAMA_BASE_URL", "http://localhost:11434/v1")
+OLLAMA_MODEL    = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
+client = OpenAI(base_url=OLLAMA_BASE_URL, api_key="ollama")
 
 # ═══════════════════════════════════════════════════════════════════════════
 # HARD-CODED LANGUAGE TOPICS
@@ -58,7 +59,7 @@ def get_topics(subject: str, grade: str) -> dict:
 
     try:
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=OLLAMA_MODEL,
             messages=[
                 {"role": "system", "content": f"""You are a curriculum designer creating topics for teaching {subject}.
 
@@ -189,7 +190,7 @@ SUMMARY:
         messages.append({"role": "user", "content": f"Explain '{topic}' for {grade} students learning {subject}."})
 
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=OLLAMA_MODEL,
             messages=messages,
             max_tokens=600,
             temperature=0.7
@@ -305,7 +306,7 @@ SUMMARY:
     messages.append({"role": "user", "content": f"Explain '{topic}' for {grade} students learning {subject}."})
 
     stream = client.chat.completions.create(
-        model="gpt-4o-mini",
+        model=OLLAMA_MODEL,
         messages=messages,
         max_tokens=600,
         temperature=0.7,
@@ -321,7 +322,7 @@ def practice_question(subject: str, grade: str) -> dict:
     """Generate a practice question"""
     try:
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=OLLAMA_MODEL,
             messages=[
                 {"role": "system", "content": f"Generate a practice question for {grade} students learning {subject}."},
                 {"role": "user", "content": f"Create a practice question for {subject} at {grade} level with answer."}
@@ -431,7 +432,7 @@ def quick_answer(question: str, grade: str = "Grade 6") -> dict:
     """Answer a question in a few lines with current information"""
     try:
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model=OLLAMA_MODEL,
             messages=[
                 {"role": "system", "content": f"""You are a helpful tutor answering student questions.
 
