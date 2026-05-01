@@ -37,19 +37,17 @@ def session(chat_id):
 # ── /start ────────────────────────────────────────────────────────────────────
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
-    # Reset session on /start
-    sessions[chat_id] = {"grade": None, "age": None, "subject": None, "state": "setup", "history": []}
+    sessions[chat_id] = {"grade": None, "age": None, "subject": None, "state": "ask_grade", "history": []}
+    keyboard = [
+        [InlineKeyboardButton(f"Grade {g}", callback_data=f"grade:{g}") for g in [6, 7, 8]],
+        [InlineKeyboardButton(f"Grade {g}", callback_data=f"grade:{g}") for g in [9, 10, 11]],
+        [InlineKeyboardButton("Grade 12", callback_data="grade:12")],
+    ]
     await update.message.reply_text(
         "🎓 *Welcome to CodeVidhya AI Tutor!*\n\n"
-        "To get started, please tell me:\n\n"
-        "1️⃣ Your *Grade* (e.g. Grade 8)\n"
-        "2️⃣ Your *Age* (e.g. 13)\n"
-        "3️⃣ *Subject* you want to learn (e.g. Python, Math, Science)\n\n"
-        "📝 Reply in *one message* like this:\n"
-        "`Grade 8, 13, Python`\n\n"
-        "or\n\n"
-        "`Grade 10, 15, Mathematics`",
-        parse_mode="Markdown"
+        "Let's set up your profile. Please select your *Grade*:",
+        parse_mode="Markdown",
+        reply_markup=InlineKeyboardMarkup(keyboard)
     )
 
 # ── /help ─────────────────────────────────────────────────────────────────────
@@ -213,7 +211,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     s = session(chat_id)
     text = update.message.text.strip()
 
-    # ── SETUP STATE: parse grade, age, subject from one message ───────────────
+    # ── SETUP: student typed custom subject ──────────────────────────────────
+    if s["state"] == "ask_subject_text":
+        await _finish_setup(update.message, s, text)
+        return
+
+    # ── OLD SETUP STATE (fallback) ────────────────────────────────────────────
     if s["state"] == "setup":
         try:
             # Parse: "Grade 8, 13, Python" or "8, 13, Python" or similar
@@ -290,10 +293,64 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
-    s = session(query.message.chat_id)
+    chat_id = query.message.chat_id
+    s = session(chat_id)
     data = query.data
 
-    if data == "practice":
+    # ── FORM: Grade selected ──────────────────────────────────────────────────
+    if data.startswith("grade:"):
+        grade_num = data.split(":")[1]
+        s["grade"] = f"Grade {grade_num}"
+        s["state"] = "ask_age"
+        keyboard = [
+            [InlineKeyboardButton(str(a), callback_data=f"age:{a}") for a in [11, 12, 13, 14]],
+            [InlineKeyboardButton(str(a), callback_data=f"age:{a}") for a in [15, 16, 17, 18]],
+            [InlineKeyboardButton("18+", callback_data="age:18+")],
+        ]
+        await query.message.reply_text(
+            f"✅ Grade *{grade_num}* selected!\n\n"
+            f"Now select your *Age*:",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+    # ── FORM: Age selected ────────────────────────────────────────────────────
+    elif data.startswith("age:"):
+        age = data.split(":")[1]
+        s["age"] = age
+        s["state"] = "ask_subject"
+        keyboard = [
+            [InlineKeyboardButton("🐍 Python",      callback_data="subject:Python"),
+             InlineKeyboardButton("📐 Mathematics",  callback_data="subject:Mathematics")],
+            [InlineKeyboardButton("🔬 Science",      callback_data="subject:Science"),
+             InlineKeyboardButton("📖 English",      callback_data="subject:English")],
+            [InlineKeyboardButton("🌍 Spanish",      callback_data="subject:Spanish"),
+             InlineKeyboardButton("💻 JavaScript",   callback_data="subject:JavaScript")],
+            [InlineKeyboardButton("🤖 AI & ML",      callback_data="subject:AI and Machine Learning"),
+             InlineKeyboardButton("📊 Data Science", callback_data="subject:Data Science")],
+            [InlineKeyboardButton("✏️ Other (type below)", callback_data="subject:other")],
+        ]
+        await query.message.reply_text(
+            f"✅ Age *{age}* selected!\n\n"
+            f"Now select your *Subject*:",
+            parse_mode="Markdown",
+            reply_markup=InlineKeyboardMarkup(keyboard)
+        )
+
+    # ── FORM: Subject selected ────────────────────────────────────────────────
+    elif data.startswith("subject:"):
+        subject = data.split(":", 1)[1]
+        if subject == "other":
+            s["state"] = "ask_subject_text"
+            await query.message.reply_text(
+                "✏️ Type your subject name below:",
+                parse_mode="Markdown"
+            )
+            return
+        await _finish_setup(query.message, s, subject)
+
+    # ── LEARNING: Practice question ───────────────────────────────────────────
+    elif data == "practice":
         subject = s["subject"] or "Python"
         await query.message.reply_text(f"📝 Generating practice question for *{subject}*...", parse_mode="Markdown")
         try:
@@ -303,6 +360,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception as e:
             await query.message.reply_text(f"Error: {str(e)}")
 
+    # ── LEARNING: Videos ──────────────────────────────────────────────────────
     elif data.startswith("videos:"):
         topic = data.split(":", 1)[1]
         subject = s["subject"] or "Python"
@@ -318,6 +376,30 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await query.message.reply_text(text, parse_mode="Markdown")
         except Exception as e:
             await query.message.reply_text(f"Error: {str(e)}")
+
+# ── Shared: finish setup and load topics ──────────────────────────────────────
+async def _finish_setup(message, s: dict, subject: str):
+    s["subject"] = subject
+    s["state"]   = "ready"
+    await message.reply_text(
+        f"🎉 *All set!*\n\n"
+        f"👤 Age: *{s['age']}*\n"
+        f"📚 Grade: *{s['grade']}*\n"
+        f"🎯 Subject: *{subject}*\n\n"
+        f"Loading your topics...",
+        parse_mode="Markdown"
+    )
+    try:
+        result = get_topics(subject, s["grade"])
+        topics = result.get("topics", [])
+        if topics:
+            text = f"📚 *{subject} Topics — {s['grade']}*\n\n"
+            for i, t in enumerate(topics, 1):
+                text += f"{i}. {t}\n"
+            text += f"\n💡 Type /explain [topic] to start learning!\nExample: `/explain {topics[0]}`"
+            await message.reply_text(text, parse_mode="Markdown")
+    except Exception as e:
+        await message.reply_text(f"Ready to learn {subject}! Ask me anything. 🚀")
 
 # ── Start bot (runs in background thread) ─────────────────────────────────────
 def run():
