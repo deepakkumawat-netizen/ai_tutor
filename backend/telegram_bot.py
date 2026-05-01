@@ -408,6 +408,23 @@ def run():
         return
 
     async def _main():
+        import httpx
+
+        # Delete any lingering webhook or other polling sessions before starting.
+        # This resolves 409 Conflict that occurs during Render rolling deploys.
+        try:
+            async with httpx.AsyncClient(timeout=10) as client:
+                r = await client.post(
+                    f"https://api.telegram.org/bot{BOT_TOKEN}/deleteWebhook",
+                    json={"drop_pending_updates": True}
+                )
+                logger.info(f"deleteWebhook: {r.json()}")
+        except Exception as e:
+            logger.warning(f"deleteWebhook failed (non-fatal): {e}")
+
+        # Brief pause so any previous polling instance releases the session.
+        await asyncio.sleep(2)
+
         app = Application.builder().token(BOT_TOKEN).build()
         app.add_handler(CommandHandler("start",    cmd_start))
         app.add_handler(CommandHandler("help",     cmd_help))
@@ -422,7 +439,10 @@ def run():
         logger.info("🤖 Telegram AI Tutor Bot started!")
         async with app:
             await app.start()
-            await app.updater.start_polling(drop_pending_updates=True)
+            await app.updater.start_polling(
+                drop_pending_updates=True,
+                allowed_updates=["message", "callback_query"],
+            )
             await asyncio.Event().wait()  # run forever
 
     asyncio.run(_main())
