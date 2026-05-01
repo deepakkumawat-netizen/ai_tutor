@@ -43,6 +43,14 @@ if sys.platform == "win32":
 
 app = FastAPI()
 
+# Start Telegram bot in background
+try:
+    import telegram_bot
+    telegram_bot.start()
+    print("[✓] Telegram AI Tutor Bot started")
+except Exception as e:
+    print(f"[!] Telegram bot not started: {e}")
+
 # Startup event - verify database is initialized
 @app.on_event("startup")
 async def startup_event():
