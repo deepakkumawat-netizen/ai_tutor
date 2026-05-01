@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """
-CodeVidhya AI Tutor — Telegram Bot (webhook mode)
-Telegram pushes updates to our FastAPI endpoint — no polling, no 409 Conflict.
+CodeVidhya AI Tutor — Telegram Bot (webhook mode, fully button-based)
+Students never need to type — all interactions are tap buttons.
 """
 
 import os
+import re
+import asyncio
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -18,8 +20,8 @@ logger = logging.getLogger(__name__)
 
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 
-# Per-user session: grade, age, subject, state, history
-sessions = {}
+# Per-user sessions
+sessions: dict = {}
 
 def session(chat_id):
     if chat_id not in sessions:
@@ -27,393 +29,481 @@ def session(chat_id):
             "grade": None,
             "age": None,
             "subject": None,
-            "state": "new",   # new | setup | ready
-            "history": []
+            "state": "ask_grade",
+            "topics": [],
+            "current_topic": None,
+            "qa_questions": [],
+            "practice_data": {},
+            "history": [],
         }
     return sessions[chat_id]
 
-# ── /start ────────────────────────────────────────────────────────────────────
-async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
-    sessions[chat_id] = {"grade": None, "age": None, "subject": None, "state": "ask_grade", "history": []}
-    keyboard = [
+# ── Async wrappers for sync MCP calls ─────────────────────────────────────────
+async def _get_topics(subject, grade):
+    return await asyncio.to_thread(get_topics, subject, grade)
+
+async def _explain(topic, grade, subject, history):
+    return await asyncio.to_thread(explain_topic, topic, grade, subject, history)
+
+async def _practice(subject, grade):
+    return await asyncio.to_thread(practice_question, subject, grade)
+
+async def _videos(subject, grade, topic):
+    return await asyncio.to_thread(get_educational_videos, subject, grade, topic)
+
+async def _quick(question, grade):
+    return await asyncio.to_thread(quick_answer, question, grade)
+
+# ── Keyboards ──────────────────────────────────────────────────────────────────
+
+def kb_main_menu():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("📚 Topics",          callback_data="m:topics"),
+         InlineKeyboardButton("📖 Explain Topic",   callback_data="m:explain")],
+        [InlineKeyboardButton("📝 Practice Quiz",   callback_data="m:practice"),
+         InlineKeyboardButton("🎥 Watch Videos",    callback_data="m:videos")],
+        [InlineKeyboardButton("💬 Ask a Question",  callback_data="m:qa")],
+        [InlineKeyboardButton("📊 Change Grade",    callback_data="m:grade"),
+         InlineKeyboardButton("🔄 Change Subject",  callback_data="m:subject")],
+    ])
+
+def kb_grades():
+    return InlineKeyboardMarkup([
         [InlineKeyboardButton(f"Grade {g}", callback_data=f"grade:{g}") for g in [6, 7, 8]],
         [InlineKeyboardButton(f"Grade {g}", callback_data=f"grade:{g}") for g in [9, 10, 11]],
         [InlineKeyboardButton("Grade 12", callback_data="grade:12")],
+    ])
+
+def kb_ages():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton(str(a), callback_data=f"age:{a}") for a in [11, 12, 13, 14]],
+        [InlineKeyboardButton(str(a), callback_data=f"age:{a}") for a in [15, 16, 17, 18]],
+        [InlineKeyboardButton("18+", callback_data="age:18+")],
+    ])
+
+def kb_subjects():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🐍 Python",     callback_data="subject:Python"),
+         InlineKeyboardButton("📐 Mathematics", callback_data="subject:Mathematics")],
+        [InlineKeyboardButton("🔬 Science",    callback_data="subject:Science"),
+         InlineKeyboardButton("📖 English",    callback_data="subject:English")],
+        [InlineKeyboardButton("🌍 Spanish",    callback_data="subject:Spanish"),
+         InlineKeyboardButton("💻 JavaScript", callback_data="subject:JavaScript")],
+        [InlineKeyboardButton("🤖 AI & ML",    callback_data="subject:AI and Machine Learning"),
+         InlineKeyboardButton("📊 Data Science", callback_data="subject:Data Science")],
+    ])
+
+def kb_topics(topics, prefix):
+    rows = []
+    for i in range(0, len(topics), 2):
+        row = [InlineKeyboardButton(f"📌 {topics[i]}", callback_data=f"{prefix}:{i}")]
+        if i + 1 < len(topics):
+            row.append(InlineKeyboardButton(f"📌 {topics[i+1]}", callback_data=f"{prefix}:{i+1}"))
+        rows.append(row)
+    rows.append([InlineKeyboardButton("🏠 Main Menu", callback_data="home")])
+    return InlineKeyboardMarkup(rows)
+
+def kb_after_explain():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("📝 Practice on this", callback_data="p:topic"),
+         InlineKeyboardButton("🎥 Videos for this",  callback_data="v:topic")],
+        [InlineKeyboardButton("💬 Ask a Question",   callback_data="qa:topic"),
+         InlineKeyboardButton("🏠 Main Menu",        callback_data="home")],
+    ])
+
+def kb_after_practice():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🔄 Try Another",  callback_data="p:next"),
+         InlineKeyboardButton("💡 Show Hint",    callback_data="p:hint")],
+        [InlineKeyboardButton("✅ Show Answer",  callback_data="p:answer"),
+         InlineKeyboardButton("🏠 Main Menu",    callback_data="home")],
+    ])
+
+def kb_mcq(options):
+    rows = []
+    for letter, text in options:
+        label = f"{letter})  {text[:50]}"
+        rows.append([InlineKeyboardButton(label, callback_data=f"mcq:{letter}")])
+    rows.append([InlineKeyboardButton("💡 Hint",      callback_data="p:hint"),
+                 InlineKeyboardButton("🏠 Main Menu", callback_data="home")])
+    return InlineKeyboardMarkup(rows)
+
+def kb_qa(questions):
+    rows = [[InlineKeyboardButton(f"❓ {q[:55]}", callback_data=f"qq:{i}")]
+            for i, q in enumerate(questions)]
+    rows.append([InlineKeyboardButton("🔄 More Questions", callback_data="qa:more"),
+                 InlineKeyboardButton("🏠 Main Menu",      callback_data="home")])
+    return InlineKeyboardMarkup(rows)
+
+def kb_after_qa():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("💬 More Questions", callback_data="qa:more"),
+         InlineKeyboardButton("🏠 Main Menu",      callback_data="home")],
+    ])
+
+def kb_home():
+    return InlineKeyboardMarkup([[InlineKeyboardButton("🏠 Main Menu", callback_data="home")]])
+
+def kb_next_practice():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("🔄 Next Question", callback_data="p:next"),
+         InlineKeyboardButton("🏠 Main Menu",     callback_data="home")],
+    ])
+
+# ── Helpers ────────────────────────────────────────────────────────────────────
+
+def parse_mcq(text):
+    """Extract MCQ stem and options from AI-generated question text."""
+    lines = text.strip().split("\n")
+    options, stem_lines = [], []
+    for line in lines:
+        m = re.match(r"^\s*([A-D])[.)]\s+(.+)", line)
+        if m:
+            options.append((m.group(1), m.group(2).strip()))
+        else:
+            stem_lines.append(line)
+    return "\n".join(stem_lines).strip(), options
+
+async def _gen_qa_questions(subject, grade, topic=None):
+    context = f"{topic} in {subject}" if topic else subject
+    prompt = (
+        f"List exactly 6 short student questions about {context} for {grade}. "
+        "Return only the questions, one per line, no numbering."
+    )
+    fallback = [
+        f"What is {context}?",
+        f"How does {context} work?",
+        f"Give me an example of {context}.",
+        f"Why is {context} important?",
+        f"What are common mistakes with {context}?",
+        f"How do I practice {context}?",
     ]
+    try:
+        result = await _quick(prompt, grade or "Grade 8")
+        qs = [q.strip() for q in result.get("answer", "").split("\n") if q.strip()][:6]
+        return qs if len(qs) >= 3 else fallback
+    except Exception:
+        return fallback
+
+async def _send_main_menu(msg, s):
+    await msg.reply_text(
+        f"🏠 *Main Menu*\n\n"
+        f"Grade: *{s['grade']}*  |  Subject: *{s['subject']}*\n\n"
+        f"Tap what you want to do 👇",
+        parse_mode="Markdown",
+        reply_markup=kb_main_menu(),
+    )
+
+async def _fetch_and_show_topics(msg, s, prefix):
+    await msg.reply_text(f"⏳ Loading *{s['subject']}* topics...", parse_mode="Markdown")
+    result = await _get_topics(s["subject"], s["grade"])
+    topics = result.get("topics", [])
+    if not topics:
+        await msg.reply_text("No topics found for this subject.", reply_markup=kb_home())
+        return False
+    s["topics"] = topics
+    return True
+
+# ── /start ─────────────────────────────────────────────────────────────────────
+async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    sessions[chat_id] = {
+        "grade": None, "age": None, "subject": None,
+        "state": "ask_grade", "topics": [], "current_topic": None,
+        "qa_questions": [], "practice_data": {}, "history": [],
+    }
     await update.message.reply_text(
         "🎓 *Welcome to CodeVidhya AI Tutor!*\n\n"
-        "Let's set up your profile. Please select your *Grade*:",
+        "Your personal AI teacher on Telegram.\n"
+        "Everything works with *tap buttons* — no typing needed!\n\n"
+        "Let's start. Select your *Grade* 👇",
         parse_mode="Markdown",
-        reply_markup=InlineKeyboardMarkup(keyboard)
+        reply_markup=kb_grades(),
     )
 
-# ── /help ─────────────────────────────────────────────────────────────────────
-async def cmd_help(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    s = session(update.effective_chat.id)
-    subj = s["subject"] or "not set"
-    grade = s["grade"]
-    await update.message.reply_text(
-        f"📋 *AI Tutor Help*\n\n"
-        f"Current subject: *{subj}*\n"
-        f"Current grade: *{grade}*\n\n"
-        "*/subject [name]* — change subject\n"
-        "  e.g. /subject Python\n"
-        "  e.g. /subject Mathematics\n"
-        "  e.g. /subject Spanish\n\n"
-        "*/grade [1-12]* — change your grade\n"
-        "  e.g. /grade 8\n\n"
-        "*/topics* — list all topics for your subject\n\n"
-        "*/explain [topic]* — full explanation with examples\n"
-        "  e.g. /explain loops\n"
-        "  e.g. /explain variables\n\n"
-        "*/practice* — get a practice question\n\n"
-        "*/videos* — get YouTube learning videos\n\n"
-        "Or just type any question!",
-        parse_mode="Markdown"
-    )
-
-# ── /grade ────────────────────────────────────────────────────────────────────
-async def cmd_grade(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    s = session(update.effective_chat.id)
-    args = context.args
-    if not args:
-        await update.message.reply_text("Usage: /grade 8\nEnter your grade number (1-12)")
-        return
-    grade_num = args[0].replace("Grade", "").strip()
-    s["grade"] = f"Grade {grade_num}"
-    s["history"] = []
-    await update.message.reply_text(
-        f"✅ Grade set to *Grade {grade_num}*\n\n"
-        f"Now set your subject with /subject [name]",
-        parse_mode="Markdown"
-    )
-
-# ── /subject ──────────────────────────────────────────────────────────────────
-async def cmd_subject(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    s = session(update.effective_chat.id)
-    args = context.args
-    if not args:
-        await update.message.reply_text(
-            "Usage: /subject Python\n\n"
-            "Examples:\n"
-            "• /subject Python\n"
-            "• /subject Mathematics\n"
-            "• /subject Spanish\n"
-            "• /subject Science\n"
-            "• /subject English"
-        )
-        return
-    subject = " ".join(args)
-    s["subject"] = subject
-    s["history"] = []
-    await update.message.reply_text(
-        f"✅ Subject set to *{subject}*\n\n"
-        f"Type /topics to see all learning topics!",
-        parse_mode="Markdown"
-    )
-
-# ── /topics ───────────────────────────────────────────────────────────────────
-async def cmd_topics(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    s = session(update.effective_chat.id)
-    if not s["subject"]:
-        await update.message.reply_text("Please set a subject first!\nExample: /subject Python")
-        return
-    await update.message.reply_text(f"⏳ Getting topics for *{s['subject']}*...", parse_mode="Markdown")
-    try:
-        result = get_topics(s["subject"], s["grade"])
-        topics = result.get("topics", [])
-        if not topics:
-            await update.message.reply_text("No topics found. Try a different subject.")
-            return
-        text = f"📚 *{s['subject']} Topics* ({s['grade']})\n\n"
-        for i, t in enumerate(topics, 1):
-            text += f"{i}. {t}\n"
-        text += f"\n💡 Type /explain [topic name] to start learning!\nExample: /explain {topics[0]}"
-        await update.message.reply_text(text, parse_mode="Markdown")
-    except Exception as e:
-        await update.message.reply_text(f"Error getting topics: {str(e)}")
-
-# ── /explain ──────────────────────────────────────────────────────────────────
-async def cmd_explain(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    s = session(update.effective_chat.id)
-    args = context.args
-    if not args:
-        await update.message.reply_text("Usage: /explain [topic]\nExample: /explain loops")
-        return
-    topic = " ".join(args)
-    subject = s["subject"] or "Programming"
-    await update.message.reply_text(f"📖 Explaining *{topic}*...", parse_mode="Markdown")
-    try:
-        result = explain_topic(topic, s["grade"], subject, s["history"])
-        explanation = result.get("explanation", "No explanation available.")
-        # Telegram message limit is 4096 chars — split if needed
-        if len(explanation) > 4000:
-            explanation = explanation[:4000] + "...\n\n[Explanation truncated]"
-        keyboard = [
-            [InlineKeyboardButton("📝 Practice Question", callback_data=f"practice")],
-            [InlineKeyboardButton("🎥 Watch Videos", callback_data=f"videos:{topic}")],
-        ]
-        await update.message.reply_text(
-            f"📖 *{topic}*\n\n{explanation}",
-            parse_mode="Markdown",
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
-        # Keep conversation history
-        s["history"].append({"role": "user", "content": f"Explain {topic}"})
-        s["history"].append({"role": "assistant", "content": explanation})
-        s["history"] = s["history"][-10:]  # keep last 5 exchanges
-    except Exception as e:
-        await update.message.reply_text(f"Error: {str(e)}")
-
-# ── /practice ─────────────────────────────────────────────────────────────────
-async def cmd_practice(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    s = session(update.effective_chat.id)
-    subject = s["subject"] or "Python"
-    await update.message.reply_text(f"📝 Generating practice question for *{subject}*...", parse_mode="Markdown")
-    try:
-        result = practice_question(subject, s["grade"])
-        question = result.get("question", "No question generated.")
-        await update.message.reply_text(
-            f"📝 *Practice Question*\n\n{question}\n\n"
-            f"💬 Type your answer or ask for a hint!",
-            parse_mode="Markdown"
-        )
-    except Exception as e:
-        await update.message.reply_text(f"Error: {str(e)}")
-
-# ── /videos ───────────────────────────────────────────────────────────────────
-async def cmd_videos(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    s = session(update.effective_chat.id)
-    subject = s["subject"] or "Python"
-    topic = " ".join(context.args) if context.args else None
-    await update.message.reply_text(f"🎥 Finding videos for *{subject}*...", parse_mode="Markdown")
-    try:
-        result = get_educational_videos(subject, s["grade"], topic)
-        videos = result.get("videos", [])
-        if not videos:
-            await update.message.reply_text("No videos found. Try /videos [topic name]")
-            return
-        text = f"🎥 *Learning Videos — {subject}*\n\n"
-        for v in videos[:5]:
-            title = v.get("title", "Video")
-            url = v.get("url", "")
-            text += f"▶️ [{title}]({url})\n\n"
-        await update.message.reply_text(text, parse_mode="Markdown", disable_web_page_preview=False)
-    except Exception as e:
-        await update.message.reply_text(f"Error: {str(e)}")
-
-# ── Free text handler ─────────────────────────────────────────────────────────
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
-    s = session(chat_id)
-    text = update.message.text.strip()
-
-    # ── SETUP: student typed custom subject ──────────────────────────────────
-    if s["state"] == "ask_subject_text":
-        await _finish_setup(update.message, s, text)
-        return
-
-    # ── OLD SETUP STATE (fallback) ────────────────────────────────────────────
-    if s["state"] == "setup":
-        try:
-            # Parse: "Grade 8, 13, Python" or "8, 13, Python" or similar
-            parts = [p.strip() for p in text.replace(";", ",").split(",")]
-            grade_raw = parts[0] if len(parts) > 0 else "8"
-            age_raw   = parts[1] if len(parts) > 1 else "13"
-            subject   = parts[2] if len(parts) > 2 else "Python"
-
-            # Clean grade
-            grade_num = grade_raw.lower().replace("grade", "").strip()
-            grade = f"Grade {grade_num}"
-
-            # Clean age
-            age = age_raw.replace("years", "").replace("yr", "").strip()
-
-            s["grade"]   = grade
-            s["age"]     = age
-            s["subject"] = subject
-            s["state"]   = "ready"
-
-            await update.message.reply_text(
-                f"✅ *Got it!*\n\n"
-                f"👤 Age: *{age}*\n"
-                f"📚 Grade: *{grade}*\n"
-                f"🎯 Subject: *{subject}*\n\n"
-                f"Loading your topics...",
-                parse_mode="Markdown"
-            )
-
-            # Auto-load topics
-            result = get_topics(subject, grade)
-            topics = result.get("topics", [])
-            if topics:
-                text_topics = f"📚 *{subject} Topics for {grade}*\n\n"
-                for i, t in enumerate(topics, 1):
-                    text_topics += f"{i}. {t}\n"
-                text_topics += f"\n💡 Type /explain [topic] to start!\nExample: `/explain {topics[0]}`"
-                await update.message.reply_text(text_topics, parse_mode="Markdown")
-            else:
-                await update.message.reply_text(f"Ready! Ask me anything about {subject} 🚀")
-        except Exception as e:
-            await update.message.reply_text(
-                "❌ I couldn't understand that. Please reply like this:\n\n"
-                "`Grade 8, 13, Python`\n\n"
-                "Format: Grade, Age, Subject",
-                parse_mode="Markdown"
-            )
-        return
-
-    # ── READY STATE: answer questions ─────────────────────────────────────────
-    if s["state"] != "ready":
-        await update.message.reply_text("Please type /start to begin.")
-        return
-
-    await update.message.reply_text("🤔 Thinking...")
-    try:
-        result = quick_answer(text, s["grade"] or "Grade 8")
-        answer = result.get("answer", "I couldn't find an answer.")
-        if len(answer) > 4000:
-            answer = answer[:4000] + "..."
-        s["history"].append({"role": "user", "content": text})
-        s["history"].append({"role": "assistant", "content": answer})
-        s["history"] = s["history"][-10:]
-        keyboard = [[InlineKeyboardButton("📝 Practice Question", callback_data="practice")]]
-        await update.message.reply_text(
-            answer,
-            parse_mode="Markdown",
-            reply_markup=InlineKeyboardMarkup(keyboard)
-        )
-    except Exception as e:
-        await update.message.reply_text(f"Error: {str(e)}")
-
-# ── Inline button callbacks ───────────────────────────────────────────────────
+# ── Callback handler ───────────────────────────────────────────────────────────
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
     await query.answer()
     chat_id = query.message.chat_id
     s = session(chat_id)
     data = query.data
+    msg = query.message
 
-    # ── FORM: Grade selected ──────────────────────────────────────────────────
+    # ── ONBOARDING ─────────────────────────────────────────────────────────────
+
     if data.startswith("grade:"):
         grade_num = data.split(":")[1]
         s["grade"] = f"Grade {grade_num}"
-        s["state"] = "ask_age"
-        keyboard = [
-            [InlineKeyboardButton(str(a), callback_data=f"age:{a}") for a in [11, 12, 13, 14]],
-            [InlineKeyboardButton(str(a), callback_data=f"age:{a}") for a in [15, 16, 17, 18]],
-            [InlineKeyboardButton("18+", callback_data="age:18+")],
-        ]
-        await query.message.reply_text(
-            f"✅ Grade *{grade_num}* selected!\n\n"
-            f"Now select your *Age*:",
+        s["history"] = []
+        await msg.reply_text(
+            f"✅ *Grade {grade_num}* selected!\n\nHow old are you? 👇",
             parse_mode="Markdown",
-            reply_markup=InlineKeyboardMarkup(keyboard)
+            reply_markup=kb_ages(),
         )
 
-    # ── FORM: Age selected ────────────────────────────────────────────────────
     elif data.startswith("age:"):
-        age = data.split(":")[1]
-        s["age"] = age
-        s["state"] = "ask_subject"
-        keyboard = [
-            [InlineKeyboardButton("🐍 Python",      callback_data="subject:Python"),
-             InlineKeyboardButton("📐 Mathematics",  callback_data="subject:Mathematics")],
-            [InlineKeyboardButton("🔬 Science",      callback_data="subject:Science"),
-             InlineKeyboardButton("📖 English",      callback_data="subject:English")],
-            [InlineKeyboardButton("🌍 Spanish",      callback_data="subject:Spanish"),
-             InlineKeyboardButton("💻 JavaScript",   callback_data="subject:JavaScript")],
-            [InlineKeyboardButton("🤖 AI & ML",      callback_data="subject:AI and Machine Learning"),
-             InlineKeyboardButton("📊 Data Science", callback_data="subject:Data Science")],
-            [InlineKeyboardButton("✏️ Other (type below)", callback_data="subject:other")],
-        ]
-        await query.message.reply_text(
-            f"✅ Age *{age}* selected!\n\n"
-            f"Now select your *Subject*:",
+        s["age"] = data.split(":")[1]
+        await msg.reply_text(
+            f"✅ Age *{s['age']}* noted!\n\nChoose your *Subject* 👇",
             parse_mode="Markdown",
-            reply_markup=InlineKeyboardMarkup(keyboard)
+            reply_markup=kb_subjects(),
         )
 
-    # ── FORM: Subject selected ────────────────────────────────────────────────
     elif data.startswith("subject:"):
         subject = data.split(":", 1)[1]
-        if subject == "other":
-            s["state"] = "ask_subject_text"
-            await query.message.reply_text(
-                "✏️ Type your subject name below:",
-                parse_mode="Markdown"
+        s["subject"] = subject
+        s["state"] = "ready"
+        s["topics"] = []
+        s["current_topic"] = None
+        await msg.reply_text(
+            f"🎉 *All set!*\n\n"
+            f"Grade: *{s['grade']}*  |  Subject: *{subject}*\n\n"
+            f"Tap any button to start learning! 👇",
+            parse_mode="Markdown",
+            reply_markup=kb_main_menu(),
+        )
+
+    # ── NAVIGATION ─────────────────────────────────────────────────────────────
+
+    elif data == "home":
+        if not s["subject"]:
+            await msg.reply_text("Let's set up first! Select your Grade:", reply_markup=kb_grades())
+        else:
+            await _send_main_menu(msg, s)
+
+    elif data == "m:grade":
+        await msg.reply_text("Select your *Grade* 👇", parse_mode="Markdown", reply_markup=kb_grades())
+
+    elif data == "m:subject":
+        await msg.reply_text("Select your *Subject* 👇", parse_mode="Markdown", reply_markup=kb_subjects())
+
+    # ── TOPICS ─────────────────────────────────────────────────────────────────
+
+    elif data == "m:topics":
+        ok = await _fetch_and_show_topics(msg, s, "topic")
+        if ok:
+            await msg.reply_text(
+                f"📚 *{s['subject']} Topics — {s['grade']}*\n\nTap a topic to explore it:",
+                parse_mode="Markdown",
+                reply_markup=kb_topics(s["topics"], "topic"),
             )
-            return
-        await _finish_setup(query.message, s, subject)
 
-    # ── LEARNING: Practice question ───────────────────────────────────────────
-    elif data == "practice":
-        subject = s["subject"] or "Python"
-        await query.message.reply_text(f"📝 Generating practice question for *{subject}*...", parse_mode="Markdown")
-        try:
-            result = practice_question(subject, s["grade"])
-            question = result.get("question", "No question generated.")
-            await query.message.reply_text(f"📝 *Practice Question*\n\n{question}", parse_mode="Markdown")
-        except Exception as e:
-            await query.message.reply_text(f"Error: {str(e)}")
+    elif data.startswith("topic:"):
+        idx = int(data.split(":")[1])
+        if 0 <= idx < len(s["topics"]):
+            s["current_topic"] = s["topics"][idx]
+            await _do_explain(msg, s)
 
-    # ── LEARNING: Videos ──────────────────────────────────────────────────────
-    elif data.startswith("videos:"):
-        topic = data.split(":", 1)[1]
-        subject = s["subject"] or "Python"
-        try:
-            result = get_educational_videos(subject, s["grade"], topic)
-            videos = result.get("videos", [])
-            if not videos:
-                await query.message.reply_text("No videos found.")
-                return
-            text = f"🎥 *Videos — {topic}*\n\n"
-            for v in videos[:5]:
-                text += f"▶️ [{v.get('title','Video')}]({v.get('url','')})\n\n"
-            await query.message.reply_text(text, parse_mode="Markdown")
-        except Exception as e:
-            await query.message.reply_text(f"Error: {str(e)}")
+    # ── EXPLAIN ────────────────────────────────────────────────────────────────
 
-# ── Shared: finish setup and load topics ──────────────────────────────────────
-async def _finish_setup(message, s: dict, subject: str):
-    s["subject"] = subject
-    s["state"]   = "ready"
-    await message.reply_text(
-        f"🎉 *All set!*\n\n"
-        f"👤 Age: *{s['age']}*\n"
-        f"📚 Grade: *{s['grade']}*\n"
-        f"🎯 Subject: *{subject}*\n\n"
-        f"Loading your topics...",
-        parse_mode="Markdown"
-    )
+    elif data == "m:explain":
+        ok = await _fetch_and_show_topics(msg, s, "explain")
+        if ok:
+            await msg.reply_text(
+                f"📖 *Which topic to explain?*\n\nTap a topic:",
+                parse_mode="Markdown",
+                reply_markup=kb_topics(s["topics"], "explain"),
+            )
+
+    elif data.startswith("explain:"):
+        idx = int(data.split(":")[1])
+        if 0 <= idx < len(s["topics"]):
+            s["current_topic"] = s["topics"][idx]
+            await _do_explain(msg, s)
+
+    # ── PRACTICE ───────────────────────────────────────────────────────────────
+
+    elif data in ("m:practice", "p:topic", "p:next"):
+        await _do_practice(msg, s)
+
+    elif data == "p:hint":
+        hint = s["practice_data"].get("hint") or "Break the problem into smaller steps. Re-read the question carefully!"
+        await msg.reply_text(f"💡 *Hint*\n\n{hint}", parse_mode="Markdown",
+                             reply_markup=kb_after_practice())
+
+    elif data == "p:answer":
+        answer = s["practice_data"].get("answer", "")
+        if not answer:
+            q = s["practice_data"].get("question", "")
+            try:
+                res = await _quick(f"Answer this question: {q}", s["grade"])
+                answer = res.get("answer", "Sorry, I couldn't generate the answer.")
+            except Exception:
+                answer = "Please try another question."
+        await msg.reply_text(f"✅ *Answer*\n\n{answer}", parse_mode="Markdown",
+                             reply_markup=kb_after_practice())
+
+    elif data.startswith("mcq:"):
+        letter = data.split(":")[1]
+        correct = s["practice_data"].get("correct", "")
+        if correct and letter == correct:
+            await msg.reply_text(
+                f"🎉 *Correct! '{letter}' is right!*\n\nExcellent work! Ready for the next one?",
+                parse_mode="Markdown",
+                reply_markup=kb_next_practice(),
+            )
+        elif correct:
+            await msg.reply_text(
+                f"❌ Not quite! The correct answer is *{correct}*.\n\nKeep practicing — you've got this!",
+                parse_mode="Markdown",
+                reply_markup=kb_next_practice(),
+            )
+        else:
+            await msg.reply_text(
+                f"You selected *{letter}*.",
+                parse_mode="Markdown",
+                reply_markup=kb_after_practice(),
+            )
+
+    # ── VIDEOS ─────────────────────────────────────────────────────────────────
+
+    elif data == "m:videos":
+        ok = await _fetch_and_show_topics(msg, s, "vtopic")
+        if ok:
+            await msg.reply_text(
+                f"🎥 *Which topic's videos?*\n\nTap a topic:",
+                parse_mode="Markdown",
+                reply_markup=kb_topics(s["topics"], "vtopic"),
+            )
+
+    elif data.startswith("vtopic:"):
+        idx = int(data.split(":")[1])
+        if 0 <= idx < len(s["topics"]):
+            s["current_topic"] = s["topics"][idx]
+            await _do_videos(msg, s)
+
+    elif data == "v:topic":
+        await _do_videos(msg, s)
+
+    # ── Q&A ────────────────────────────────────────────────────────────────────
+
+    elif data in ("m:qa", "qa:topic", "qa:more"):
+        await _do_qa(msg, s)
+
+    elif data.startswith("qq:"):
+        idx = int(data.split(":")[1])
+        qs = s.get("qa_questions", [])
+        if 0 <= idx < len(qs):
+            question = qs[idx]
+            await msg.reply_text(f"⏳ _{question}_", parse_mode="Markdown")
+            try:
+                res = await _quick(question, s["grade"] or "Grade 8")
+                answer = res.get("answer", "Sorry, I couldn't answer that.")
+                if len(answer) > 3800:
+                    answer = answer[:3800] + "..."
+                await msg.reply_text(answer, parse_mode="Markdown", reply_markup=kb_after_qa())
+            except Exception:
+                await msg.reply_text("Error getting answer.", reply_markup=kb_after_qa())
+
+# ── Action helpers ─────────────────────────────────────────────────────────────
+
+async def _do_explain(msg, s):
+    topic = s["current_topic"]
+    await msg.reply_text(f"📖 Explaining *{topic}*...", parse_mode="Markdown")
     try:
-        result = get_topics(subject, s["grade"])
-        topics = result.get("topics", [])
-        if topics:
-            text = f"📚 *{subject} Topics — {s['grade']}*\n\n"
-            for i, t in enumerate(topics, 1):
-                text += f"{i}. {t}\n"
-            text += f"\n💡 Type /explain [topic] to start learning!\nExample: `/explain {topics[0]}`"
-            await message.reply_text(text, parse_mode="Markdown")
+        result = await _explain(topic, s["grade"], s["subject"], s["history"])
+        explanation = result.get("explanation", "No explanation available.")
+        if len(explanation) > 3800:
+            explanation = explanation[:3800] + "..."
+        s["history"].append({"role": "user", "content": f"Explain {topic}"})
+        s["history"].append({"role": "assistant", "content": explanation})
+        s["history"] = s["history"][-10:]
+        await msg.reply_text(
+            f"📖 *{topic}*\n\n{explanation}",
+            parse_mode="Markdown",
+            reply_markup=kb_after_explain(),
+        )
     except Exception as e:
-        await message.reply_text(f"Ready to learn {subject}! Ask me anything. 🚀")
+        logger.error(f"explain error: {e}")
+        await msg.reply_text("Error explaining topic.", reply_markup=kb_home())
+
+async def _do_practice(msg, s):
+    subject = s["subject"] or "Python"
+    await msg.reply_text(f"📝 Generating practice question for *{subject}*...", parse_mode="Markdown")
+    try:
+        result = await _practice(subject, s["grade"])
+        q_text = result.get("question", "No question generated.")
+
+        stem, options = parse_mcq(q_text)
+
+        if len(options) >= 2:
+            # Find embedded correct answer marker, strip it from stem
+            correct_m = re.search(r"(?:correct answer|answer)[:\s]+([A-D])", q_text, re.IGNORECASE)
+            correct = correct_m.group(1).upper() if correct_m else ""
+            clean_stem = re.sub(r"\n?(?:correct answer|answer)[:\s]+[A-D].*", "", stem, flags=re.IGNORECASE).strip()
+            s["practice_data"] = {"question": q_text, "answer": correct, "correct": correct, "hint": ""}
+            await msg.reply_text(
+                f"📝 *Practice Question*\n\n{clean_stem}\n\n_Tap the correct answer:_",
+                parse_mode="Markdown",
+                reply_markup=kb_mcq(options),
+            )
+        else:
+            s["practice_data"] = {"question": q_text, "answer": "", "correct": "", "hint": ""}
+            await msg.reply_text(
+                f"📝 *Practice Question*\n\n{q_text}",
+                parse_mode="Markdown",
+                reply_markup=kb_after_practice(),
+            )
+    except Exception as e:
+        logger.error(f"practice error: {e}")
+        await msg.reply_text("Error generating question.", reply_markup=kb_home())
+
+async def _do_videos(msg, s):
+    topic = s["current_topic"]
+    subject = s["subject"] or "Python"
+    label = topic or subject
+    await msg.reply_text(f"🎥 Finding videos for *{label}*...", parse_mode="Markdown")
+    try:
+        result = await _videos(subject, s["grade"], topic)
+        videos = result.get("videos", [])
+        if not videos:
+            await msg.reply_text("No videos found for this topic.", reply_markup=kb_home())
+            return
+        text = f"🎥 *Learning Videos*\n_{label}_\n\n"
+        for v in videos[:5]:
+            title = v.get("title", "Video")
+            url = v.get("url", "")
+            text += f"▶️ [{title}]({url})\n\n"
+        await msg.reply_text(text, parse_mode="Markdown",
+                             disable_web_page_preview=False, reply_markup=kb_home())
+    except Exception as e:
+        logger.error(f"videos error: {e}")
+        await msg.reply_text("Error fetching videos.", reply_markup=kb_home())
+
+async def _do_qa(msg, s):
+    topic = s["current_topic"]
+    subject = s["subject"] or "Python"
+    label = f"*{topic}*" if topic else f"*{subject}*"
+    await msg.reply_text(f"⏳ Generating questions for {label}...", parse_mode="Markdown")
+    questions = await _gen_qa_questions(subject, s["grade"], topic)
+    s["qa_questions"] = questions
+    await msg.reply_text(
+        f"💬 *Common Questions — {label}*\n\nTap a question to get the answer:",
+        parse_mode="Markdown",
+        reply_markup=kb_qa(questions),
+    )
+
+# ── Text guard (no typing needed) ─────────────────────────────────────────────
+async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    s = session(update.effective_chat.id)
+    if not s["subject"]:
+        await update.message.reply_text(
+            "👆 Tap a button above to continue setup.",
+        )
+    else:
+        await update.message.reply_text(
+            "👆 Use the buttons to navigate — no typing needed!",
+            reply_markup=kb_main_menu(),
+        )
 
 # ── Build PTB Application (called once from app.py startup) ───────────────────
-def create_application() -> Application | None:
-    """Return a configured PTB Application. Returns None if token is missing."""
+def create_application():
     if not BOT_TOKEN:
         logger.warning("TELEGRAM_BOT_TOKEN not set — Telegram bot disabled")
         return None
     ptb = Application.builder().token(BOT_TOKEN).build()
-    ptb.add_handler(CommandHandler("start",    cmd_start))
-    ptb.add_handler(CommandHandler("help",     cmd_help))
-    ptb.add_handler(CommandHandler("grade",    cmd_grade))
-    ptb.add_handler(CommandHandler("subject",  cmd_subject))
-    ptb.add_handler(CommandHandler("topics",   cmd_topics))
-    ptb.add_handler(CommandHandler("explain",  cmd_explain))
-    ptb.add_handler(CommandHandler("practice", cmd_practice))
-    ptb.add_handler(CommandHandler("videos",   cmd_videos))
+    ptb.add_handler(CommandHandler("start", cmd_start))
     ptb.add_handler(CallbackQueryHandler(handle_callback))
-    ptb.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    ptb.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
     return ptb
