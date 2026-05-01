@@ -20,28 +20,35 @@ logger = logging.getLogger(__name__)
 
 BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
 
-# Per-user session: grade, subject, history
+# Per-user session: grade, age, subject, state, history
 sessions = {}
 
 def session(chat_id):
     if chat_id not in sessions:
-        sessions[chat_id] = {"grade": "Grade 8", "subject": None, "history": []}
+        sessions[chat_id] = {
+            "grade": None,
+            "age": None,
+            "subject": None,
+            "state": "new",   # new | setup | ready
+            "history": []
+        }
     return sessions[chat_id]
 
 # ── /start ────────────────────────────────────────────────────────────────────
 async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    chat_id = update.effective_chat.id
+    # Reset session on /start
+    sessions[chat_id] = {"grade": None, "age": None, "subject": None, "state": "setup", "history": []}
     await update.message.reply_text(
         "🎓 *Welcome to CodeVidhya AI Tutor!*\n\n"
-        "I can teach you any subject with explanations, practice questions and videos.\n\n"
-        "📚 *Commands:*\n"
-        "/subject python — set subject\n"
-        "/grade 8 — set your grade\n"
-        "/topics — see all topics\n"
-        "/explain loops — explain a topic\n"
-        "/practice — get a practice question\n"
-        "/videos — get learning videos\n"
-        "/help — show this menu\n\n"
-        "Or just *type any question* and I'll answer it! 💡",
+        "To get started, please tell me:\n\n"
+        "1️⃣ Your *Grade* (e.g. Grade 8)\n"
+        "2️⃣ Your *Age* (e.g. 13)\n"
+        "3️⃣ *Subject* you want to learn (e.g. Python, Math, Science)\n\n"
+        "📝 Reply in *one message* like this:\n"
+        "`Grade 8, 13, Python`\n\n"
+        "or\n\n"
+        "`Grade 10, 15, Mathematics`",
         parse_mode="Markdown"
     )
 
@@ -200,17 +207,74 @@ async def cmd_videos(update: Update, context: ContextTypes.DEFAULT_TYPE):
     except Exception as e:
         await update.message.reply_text(f"Error: {str(e)}")
 
-# ── Free text → quick_answer ──────────────────────────────────────────────────
+# ── Free text handler ─────────────────────────────────────────────────────────
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    s = session(update.effective_chat.id)
-    question = update.message.text.strip()
+    chat_id = update.effective_chat.id
+    s = session(chat_id)
+    text = update.message.text.strip()
+
+    # ── SETUP STATE: parse grade, age, subject from one message ───────────────
+    if s["state"] == "setup":
+        try:
+            # Parse: "Grade 8, 13, Python" or "8, 13, Python" or similar
+            parts = [p.strip() for p in text.replace(";", ",").split(",")]
+            grade_raw = parts[0] if len(parts) > 0 else "8"
+            age_raw   = parts[1] if len(parts) > 1 else "13"
+            subject   = parts[2] if len(parts) > 2 else "Python"
+
+            # Clean grade
+            grade_num = grade_raw.lower().replace("grade", "").strip()
+            grade = f"Grade {grade_num}"
+
+            # Clean age
+            age = age_raw.replace("years", "").replace("yr", "").strip()
+
+            s["grade"]   = grade
+            s["age"]     = age
+            s["subject"] = subject
+            s["state"]   = "ready"
+
+            await update.message.reply_text(
+                f"✅ *Got it!*\n\n"
+                f"👤 Age: *{age}*\n"
+                f"📚 Grade: *{grade}*\n"
+                f"🎯 Subject: *{subject}*\n\n"
+                f"Loading your topics...",
+                parse_mode="Markdown"
+            )
+
+            # Auto-load topics
+            result = get_topics(subject, grade)
+            topics = result.get("topics", [])
+            if topics:
+                text_topics = f"📚 *{subject} Topics for {grade}*\n\n"
+                for i, t in enumerate(topics, 1):
+                    text_topics += f"{i}. {t}\n"
+                text_topics += f"\n💡 Type /explain [topic] to start!\nExample: `/explain {topics[0]}`"
+                await update.message.reply_text(text_topics, parse_mode="Markdown")
+            else:
+                await update.message.reply_text(f"Ready! Ask me anything about {subject} 🚀")
+        except Exception as e:
+            await update.message.reply_text(
+                "❌ I couldn't understand that. Please reply like this:\n\n"
+                "`Grade 8, 13, Python`\n\n"
+                "Format: Grade, Age, Subject",
+                parse_mode="Markdown"
+            )
+        return
+
+    # ── READY STATE: answer questions ─────────────────────────────────────────
+    if s["state"] != "ready":
+        await update.message.reply_text("Please type /start to begin.")
+        return
+
     await update.message.reply_text("🤔 Thinking...")
     try:
-        result = quick_answer(question, s["grade"])
+        result = quick_answer(text, s["grade"] or "Grade 8")
         answer = result.get("answer", "I couldn't find an answer.")
         if len(answer) > 4000:
             answer = answer[:4000] + "..."
-        s["history"].append({"role": "user", "content": question})
+        s["history"].append({"role": "user", "content": text})
         s["history"].append({"role": "assistant", "content": answer})
         s["history"] = s["history"][-10:]
         keyboard = [[InlineKeyboardButton("📝 Practice Question", callback_data="practice")]]
