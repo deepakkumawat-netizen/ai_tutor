@@ -12,10 +12,11 @@ from dotenv import load_dotenv
 # Load environment variables FIRST before importing NLP engine
 load_dotenv()
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse, JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
+from telegram import Update
 from pathlib import Path
 from typing import Optional
 from pydantic import BaseModel
@@ -43,21 +44,58 @@ if sys.platform == "win32":
 
 app = FastAPI()
 
+# Global PTB Application instance (set during startup)
+_telegram_app = None
+
 # Startup event - verify database is initialized
 @app.on_event("startup")
 async def startup_event():
+    global _telegram_app
     import time
     print("\n" + "="*60)
     print(f"[✓ STARTUP] AI Tutor Backend v2.0 - {time.time()}")
     print("="*60)
 
-    # Start Telegram bot in background thread after app is ready
+    # Start Telegram bot via webhook (no polling — eliminates 409 Conflict)
     try:
-        import telegram_bot
-        telegram_bot.start()
-        print("[✓] Telegram AI Tutor Bot started")
+        from telegram_bot import create_application
+        ptb = create_application()
+        if ptb:
+            await ptb.initialize()
+            await ptb.start()
+            # Render automatically sets RENDER_EXTERNAL_URL for web services
+            base_url = os.getenv("RENDER_EXTERNAL_URL", "").rstrip("/")
+            if base_url:
+                webhook_url = f"{base_url}/telegram/webhook"
+                await ptb.bot.set_webhook(
+                    url=webhook_url,
+                    allowed_updates=["message", "callback_query"],
+                    drop_pending_updates=True,
+                )
+                print(f"[✓] Telegram webhook registered: {webhook_url}")
+            else:
+                print("[!] RENDER_EXTERNAL_URL not set — webhook not registered")
+            _telegram_app = ptb
+            print("[✓] Telegram AI Tutor Bot started")
     except Exception as e:
         print(f"[!] Telegram bot not started: {e}")
+
+@app.on_event("shutdown")
+async def shutdown_event():
+    global _telegram_app
+    if _telegram_app:
+        await _telegram_app.stop()
+        await _telegram_app.shutdown()
+
+# ── Telegram webhook endpoint ──────────────────────────────────────────────────
+@app.post("/telegram/webhook")
+async def telegram_webhook(request: Request):
+    if not _telegram_app:
+        return JSONResponse({"ok": False, "error": "bot not initialized"}, status_code=503)
+    data = await request.json()
+    update = Update.de_json(data, _telegram_app.bot)
+    await _telegram_app.process_update(update)
+    return JSONResponse({"ok": True})
 
     if not DB_IMPORT_SUCCESS:
         print(f"[✗] DATABASE IMPORT FAILED: {DB_IMPORT_ERROR}")

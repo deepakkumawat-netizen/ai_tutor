@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 """
-CodeVidhya AI Tutor — Telegram Bot
-Full AI Tutor experience inside Telegram
+CodeVidhya AI Tutor — Telegram Bot (webhook mode)
+Telegram pushes updates to our FastAPI endpoint — no polling, no 409 Conflict.
 """
 
 import os
-import asyncio
-import threading
 import logging
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
@@ -401,52 +399,21 @@ async def _finish_setup(message, s: dict, subject: str):
     except Exception as e:
         await message.reply_text(f"Ready to learn {subject}! Ask me anything. 🚀")
 
-# ── Start bot (runs in background thread) ─────────────────────────────────────
-def run():
+# ── Build PTB Application (called once from app.py startup) ───────────────────
+def create_application() -> Application | None:
+    """Return a configured PTB Application. Returns None if token is missing."""
     if not BOT_TOKEN:
         logger.warning("TELEGRAM_BOT_TOKEN not set — Telegram bot disabled")
-        return
-
-    async def _main():
-        import httpx
-
-        # Delete any lingering webhook or other polling sessions before starting.
-        # This resolves 409 Conflict that occurs during Render rolling deploys.
-        try:
-            async with httpx.AsyncClient(timeout=10) as client:
-                r = await client.post(
-                    f"https://api.telegram.org/bot{BOT_TOKEN}/deleteWebhook",
-                    json={"drop_pending_updates": True}
-                )
-                logger.info(f"deleteWebhook: {r.json()}")
-        except Exception as e:
-            logger.warning(f"deleteWebhook failed (non-fatal): {e}")
-
-        # Brief pause so any previous polling instance releases the session.
-        await asyncio.sleep(2)
-
-        app = Application.builder().token(BOT_TOKEN).build()
-        app.add_handler(CommandHandler("start",    cmd_start))
-        app.add_handler(CommandHandler("help",     cmd_help))
-        app.add_handler(CommandHandler("grade",    cmd_grade))
-        app.add_handler(CommandHandler("subject",  cmd_subject))
-        app.add_handler(CommandHandler("topics",   cmd_topics))
-        app.add_handler(CommandHandler("explain",  cmd_explain))
-        app.add_handler(CommandHandler("practice", cmd_practice))
-        app.add_handler(CommandHandler("videos",   cmd_videos))
-        app.add_handler(CallbackQueryHandler(handle_callback))
-        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-        logger.info("🤖 Telegram AI Tutor Bot started!")
-        async with app:
-            await app.start()
-            await app.updater.start_polling(
-                drop_pending_updates=True,
-                allowed_updates=["message", "callback_query"],
-            )
-            await asyncio.Event().wait()  # run forever
-
-    asyncio.run(_main())
-
-def start():
-    t = threading.Thread(target=run, daemon=True)
-    t.start()
+        return None
+    ptb = Application.builder().token(BOT_TOKEN).build()
+    ptb.add_handler(CommandHandler("start",    cmd_start))
+    ptb.add_handler(CommandHandler("help",     cmd_help))
+    ptb.add_handler(CommandHandler("grade",    cmd_grade))
+    ptb.add_handler(CommandHandler("subject",  cmd_subject))
+    ptb.add_handler(CommandHandler("topics",   cmd_topics))
+    ptb.add_handler(CommandHandler("explain",  cmd_explain))
+    ptb.add_handler(CommandHandler("practice", cmd_practice))
+    ptb.add_handler(CommandHandler("videos",   cmd_videos))
+    ptb.add_handler(CallbackQueryHandler(handle_callback))
+    ptb.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    return ptb
