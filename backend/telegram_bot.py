@@ -406,21 +406,26 @@ def run():
     if not BOT_TOKEN:
         logger.warning("TELEGRAM_BOT_TOKEN not set — Telegram bot disabled")
         return
-    loop = asyncio.new_event_loop()
-    asyncio.set_event_loop(loop)
-    app = Application.builder().token(BOT_TOKEN).build()
-    app.add_handler(CommandHandler("start", cmd_start))
-    app.add_handler(CommandHandler("help", cmd_help))
-    app.add_handler(CommandHandler("grade", cmd_grade))
-    app.add_handler(CommandHandler("subject", cmd_subject))
-    app.add_handler(CommandHandler("topics", cmd_topics))
-    app.add_handler(CommandHandler("explain", cmd_explain))
-    app.add_handler(CommandHandler("practice", cmd_practice))
-    app.add_handler(CommandHandler("videos", cmd_videos))
-    app.add_handler(CallbackQueryHandler(handle_callback))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    logger.info("🤖 Telegram AI Tutor Bot started!")
-    app.run_polling(drop_pending_updates=True)
+
+    async def _main():
+        app = Application.builder().token(BOT_TOKEN).build()
+        app.add_handler(CommandHandler("start",    cmd_start))
+        app.add_handler(CommandHandler("help",     cmd_help))
+        app.add_handler(CommandHandler("grade",    cmd_grade))
+        app.add_handler(CommandHandler("subject",  cmd_subject))
+        app.add_handler(CommandHandler("topics",   cmd_topics))
+        app.add_handler(CommandHandler("explain",  cmd_explain))
+        app.add_handler(CommandHandler("practice", cmd_practice))
+        app.add_handler(CommandHandler("videos",   cmd_videos))
+        app.add_handler(CallbackQueryHandler(handle_callback))
+        app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+        logger.info("🤖 Telegram AI Tutor Bot started!")
+        async with app:
+            await app.start()
+            await app.updater.start_polling(drop_pending_updates=True)
+            await asyncio.Event().wait()  # run forever
+
+    asyncio.run(_main())
 
 def start():
     t = threading.Thread(target=run, daemon=True)

@@ -43,14 +43,6 @@ if sys.platform == "win32":
 
 app = FastAPI()
 
-# Start Telegram bot in background
-try:
-    import telegram_bot
-    telegram_bot.start()
-    print("[✓] Telegram AI Tutor Bot started")
-except Exception as e:
-    print(f"[!] Telegram bot not started: {e}")
-
 # Startup event - verify database is initialized
 @app.on_event("startup")
 async def startup_event():
@@ -58,6 +50,14 @@ async def startup_event():
     print("\n" + "="*60)
     print(f"[✓ STARTUP] AI Tutor Backend v2.0 - {time.time()}")
     print("="*60)
+
+    # Start Telegram bot in background thread after app is ready
+    try:
+        import telegram_bot
+        telegram_bot.start()
+        print("[✓] Telegram AI Tutor Bot started")
+    except Exception as e:
+        print(f"[!] Telegram bot not started: {e}")
 
     if not DB_IMPORT_SUCCESS:
         print(f"[✗] DATABASE IMPORT FAILED: {DB_IMPORT_ERROR}")
