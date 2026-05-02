@@ -2499,8 +2499,8 @@ function CanvaLessonView({ slides, loading, error, topic, onRetry }) {
   if (loading) return (
     <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"60px 20px", gap:"16px" }}>
       <div style={{ fontSize:"48px", animation:"spin 2s linear infinite" }}>🎨</div>
-      <div style={{ fontSize:"18px", fontWeight:"700", color:"var(--text-primary)" }}>Creating your video script...</div>
-      <div style={{ fontSize:"14px", color:"var(--text-secondary)" }}>AI is writing narration for every topic in this lesson</div>
+      <div style={{ fontSize:"18px", fontWeight:"700", color:"var(--text-primary)" }}>Building your video from this lesson...</div>
+      <div style={{ fontSize:"14px", color:"var(--text-secondary)" }}>Converting your lesson content into a Canva video script</div>
       <style>{`@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`}</style>
     </div>
   );
@@ -3141,19 +3141,25 @@ function SubjectPage({ profile, onHome }) {
     setCanvaError(null);
     setCanvaSlides(null);
     try {
+      // Collect the lesson already shown on screen (all assistant messages)
       const lessonText = messages
         .filter(m => m.role === "assistant")
-        .map(m => typeof m.content === "string" ? m.content : "")
+        .map(m => {
+          if (typeof m.content === "string") return m.content;
+          if (Array.isArray(m.content)) return m.content.map(c => c.text || "").join(" ");
+          return "";
+        })
         .join("\n\n")
-        .slice(0, 3000);
+        .slice(0, 5000);
+
       const res = await fetch(`${API}/api/canva/video`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           subject: activeSubject,
           grade: profile.grade,
-          topics: topicList,          // all lesson topics
-          lesson_content: lessonText, // existing explanations
+          topic: activeTopic || activeSubject,   // current topic being studied
+          lesson_content: lessonText,            // lesson already on screen
         })
       });
       if (res.ok) {
@@ -3161,7 +3167,7 @@ function SubjectPage({ profile, onHome }) {
         if (data.error) setCanvaError(data.error);
         else setCanvaSlides(data);
       } else {
-        setCanvaError("Could not generate video script. Try again.");
+        setCanvaError("Could not generate video. Try again.");
       }
     } catch (err) {
       setCanvaError("Network error. Please try again.");

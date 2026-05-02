@@ -665,64 +665,65 @@ if FRONTEND_DIST.exists():
 class CanvaVideoRequest(BaseModel):
     subject: str
     grade: str
-    topics: list       # full topic list for the lesson
-    lesson_content: str = ""   # chat/explanation text already generated
+    topic: str = ""            # current topic being studied
+    lesson_content: str = ""   # lesson already shown on screen
 
 @app.post("/api/canva/video")
 async def canva_video(req: CanvaVideoRequest):
     """
-    Takes ALL lesson topics + existing lesson content and generates a
-    complete video presentation script: one slide per topic, with narration,
-    key points, and visual cues — ready to paste into Canva's video editor.
+    Takes the lesson ALREADY displayed in the AI Tutor and converts it
+    into a structured Canva video presentation script — no new content
+    generated, everything comes directly from the existing lesson.
     """
     import json
     from openai import OpenAI
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY", "").strip())
 
-    topics_list = "\n".join(f"- {t}" for t in req.topics[:15])
+    if not req.lesson_content.strip():
+        return {"error": "No lesson content found. Please open a lesson first, then click Canva.", "topic_slides": []}
 
-    prompt = f"""You are an expert educational video creator.
+    prompt = f"""You are an expert educational video editor.
 
-Create a complete VIDEO presentation script for a {req.grade} {req.subject} lesson.
+A student is studying: {req.topic} ({req.subject}, {req.grade})
 
-LESSON TOPICS:
-{topics_list}
+Below is the EXACT lesson content already displayed to the student.
+DO NOT invent new content — convert THIS lesson into a video presentation script.
 
-EXISTING LESSON CONTENT (use this as reference):
-{req.lesson_content[:3000] if req.lesson_content else "Not yet generated — use your knowledge."}
+LESSON CONTENT:
+{req.lesson_content[:5000]}
 
-Generate a video with one slide per topic. Return ONLY valid JSON (no markdown):
+Break this lesson into clear video slides. Return ONLY valid JSON (no markdown):
 {{
-  "video_title": "full video title",
+  "video_title": "title based on the lesson topic",
   "subject": "{req.subject}",
   "grade": "{req.grade}",
-  "total_duration": "estimated duration e.g. 8-10 minutes",
+  "total_duration": "estimated video duration",
   "intro_slide": {{
-    "heading": "Welcome to [Subject]!",
-    "narration": "2-3 sentence spoken introduction for the teacher/narrator",
+    "heading": "intro heading from the lesson",
+    "narration": "2-3 sentence opening narration based on the lesson intro",
     "visual_cue": "what to show on screen"
   }},
   "topic_slides": [
     {{
-      "topic": "topic name",
+      "topic": "section name from the lesson",
       "heading": "slide heading",
-      "key_points": ["point 1", "point 2", "point 3"],
-      "narration": "3-4 sentences the narrator speaks for this topic",
-      "example": "a simple real-world example",
-      "visual_cue": "what image or graphic to show",
+      "key_points": ["direct key point from lesson", "another key point", "third key point"],
+      "narration": "3-4 sentences spoken narration taken directly from this lesson section",
+      "example": "real-world example from the lesson",
+      "visual_cue": "suggested visual for this slide",
       "duration": "30-60 seconds"
     }}
   ],
   "summary_slide": {{
-    "heading": "What We Learned Today",
-    "recap_points": ["recap 1", "recap 2", "recap 3"],
-    "narration": "closing narration 2-3 sentences",
-    "call_to_action": "what students should do next"
+    "heading": "Summary",
+    "recap_points": ["key takeaway 1 from lesson", "key takeaway 2", "key takeaway 3"],
+    "narration": "closing narration summarising what was in the lesson",
+    "call_to_action": "what the student should do next"
   }},
-  "canva_template_search": "search term to find a matching Canva video template"
+  "canva_template_search": "best Canva template search term for this topic"
 }}
 
-Make the narration engaging, grade-appropriate for {req.grade}, and cover EVERY topic listed."""
+Important: All content MUST come from the lesson text provided above. Create one slide per major section of the lesson."""
 
     try:
         response = client.chat.completions.create(
