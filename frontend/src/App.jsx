@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { GRADES, SUBJECTS, getCurriculumTopic, GRADE_TOPICS } from "./constants.js";
 import UsageCounter from "./UsageCounter";
 import ChatHistory from "./ChatHistory";
