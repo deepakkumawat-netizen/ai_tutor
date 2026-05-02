@@ -2492,6 +2492,153 @@ function PracticeTestView({ topic, grade, subject, apiUrl, onScoreSave }) {
   );
 }
 
+// ─── CANVA VIDEO VIEW ─────────────────────────────────────────────────────────
+function CanvaLessonView({ slides, loading, error, topic, onRetry }) {
+  const CANVA_BLUE = "#7B2FBE";
+
+  if (loading) return (
+    <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"60px 20px", gap:"16px" }}>
+      <div style={{ fontSize:"48px", animation:"spin 2s linear infinite" }}>🎨</div>
+      <div style={{ fontSize:"18px", fontWeight:"700", color:"var(--text-primary)" }}>Creating your video script...</div>
+      <div style={{ fontSize:"14px", color:"var(--text-secondary)" }}>AI is writing narration for every topic in this lesson</div>
+      <style>{`@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`}</style>
+    </div>
+  );
+
+  if (error) return (
+    <div style={{ padding:"32px", textAlign:"center" }}>
+      <div style={{ fontSize:"32px", marginBottom:"12px" }}>⚠️</div>
+      <div style={{ color:"#ef4444", fontWeight:"600", marginBottom:"16px" }}>{error}</div>
+      <button onClick={onRetry} style={{ padding:"10px 24px", background:CANVA_BLUE, color:"#fff", border:"none", borderRadius:"8px", cursor:"pointer", fontWeight:"600" }}>Try Again</button>
+    </div>
+  );
+
+  if (!slides) return null;
+
+  const { video_title, grade, total_duration, intro_slide, topic_slides = [], summary_slide, canva_video_url, canva_template_url } = slides;
+
+  return (
+    <div style={{ padding:"16px", maxWidth:"860px", margin:"0 auto" }}>
+
+      {/* Header */}
+      <div style={{ background:`linear-gradient(135deg, ${CANVA_BLUE}, #00C4CC)`, borderRadius:"16px", padding:"24px", marginBottom:"20px", color:"#fff" }}>
+        <div style={{ fontSize:"13px", fontWeight:"600", opacity:0.8, marginBottom:"6px" }}>🎨 CANVA VIDEO SCRIPT</div>
+        <div style={{ fontSize:"22px", fontWeight:"800", marginBottom:"8px" }}>{video_title}</div>
+        <div style={{ display:"flex", gap:"16px", fontSize:"13px", opacity:0.9 }}>
+          <span>📚 {grade}</span>
+          <span>🎬 {topic_slides.length + 2} slides</span>
+          <span>⏱ {total_duration}</span>
+        </div>
+        <div style={{ display:"flex", gap:"10px", marginTop:"16px", flexWrap:"wrap" }}>
+          <a href={canva_video_url} target="_blank" rel="noreferrer"
+            style={{ padding:"10px 20px", background:"#fff", color:CANVA_BLUE, borderRadius:"8px", fontWeight:"700", fontSize:"14px", textDecoration:"none", display:"inline-flex", alignItems:"center", gap:"6px" }}>
+            🎬 Create Video in Canva
+          </a>
+          <a href={canva_template_url} target="_blank" rel="noreferrer"
+            style={{ padding:"10px 20px", background:"rgba(255,255,255,0.2)", color:"#fff", borderRadius:"8px", fontWeight:"600", fontSize:"14px", textDecoration:"none", border:"1px solid rgba(255,255,255,0.4)", display:"inline-flex", alignItems:"center", gap:"6px" }}>
+            🖼 Find Matching Template
+          </a>
+        </div>
+      </div>
+
+      {/* How to use */}
+      <div style={{ background:"var(--bg-secondary)", borderRadius:"12px", padding:"14px 18px", marginBottom:"20px", fontSize:"13px", color:"var(--text-secondary)", borderLeft:`4px solid ${CANVA_BLUE}` }}>
+        <strong style={{ color:"var(--text-primary)" }}>📋 How to use:</strong> Click <em>Create Video in Canva</em> → choose a video template → add one slide per topic below → paste the narration as speaker notes → export as video.
+      </div>
+
+      {/* Intro Slide */}
+      {intro_slide && (
+        <SlideCard number={0} type="intro" badge="🎬 Intro Slide" heading={intro_slide.heading}
+          narration={intro_slide.narration} visual={intro_slide.visual_cue} color="#6366f1" />
+      )}
+
+      {/* Topic Slides */}
+      {topic_slides.map((s, i) => (
+        <SlideCard key={i} number={i + 1} type="topic" badge={`📌 Topic ${i + 1}`}
+          heading={s.heading} topic={s.topic}
+          keyPoints={s.key_points} narration={s.narration}
+          example={s.example} visual={s.visual_cue} duration={s.duration}
+          color={CANVA_BLUE} />
+      ))}
+
+      {/* Summary Slide */}
+      {summary_slide && (
+        <SlideCard number={topic_slides.length + 1} type="summary" badge="✅ Summary Slide"
+          heading={summary_slide.heading} keyPoints={summary_slide.recap_points}
+          narration={summary_slide.narration} cta={summary_slide.call_to_action}
+          color="#10b981" />
+      )}
+
+    </div>
+  );
+}
+
+function SlideCard({ number, badge, heading, topic, keyPoints, narration, example, visual, duration, cta, color }) {
+  const [copied, setCopied] = React.useState(false);
+
+  const copyNarration = () => {
+    navigator.clipboard.writeText(narration || "");
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <div style={{ background:"var(--bg-secondary)", borderRadius:"12px", padding:"18px", marginBottom:"14px", border:`1px solid var(--border-color)`, borderLeft:`4px solid ${color}` }}>
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"10px", flexWrap:"wrap", gap:"8px" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
+          <span style={{ background:color, color:"#fff", borderRadius:"6px", padding:"3px 10px", fontSize:"11px", fontWeight:"700" }}>{badge}</span>
+          {duration && <span style={{ fontSize:"11px", color:"var(--text-secondary)", background:"var(--bg-tertiary)", padding:"3px 8px", borderRadius:"6px" }}>⏱ {duration}</span>}
+        </div>
+        <div style={{ fontSize:"20px", fontWeight:"800", color:"var(--text-secondary)", opacity:0.3 }}>#{number + 1}</div>
+      </div>
+
+      {topic && <div style={{ fontSize:"11px", color:color, fontWeight:"600", marginBottom:"4px", textTransform:"uppercase", letterSpacing:"0.5px" }}>{topic}</div>}
+      <div style={{ fontSize:"17px", fontWeight:"700", color:"var(--text-primary)", marginBottom:"12px" }}>{heading}</div>
+
+      {keyPoints?.length > 0 && (
+        <div style={{ marginBottom:"12px" }}>
+          {keyPoints.map((p, i) => (
+            <div key={i} style={{ display:"flex", gap:"8px", alignItems:"flex-start", marginBottom:"6px", fontSize:"14px", color:"var(--text-primary)" }}>
+              <span style={{ color:color, fontWeight:"700", marginTop:"1px" }}>•</span>
+              <span>{p}</span>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {example && (
+        <div style={{ background:"var(--bg-tertiary)", borderRadius:"8px", padding:"10px 14px", marginBottom:"12px", fontSize:"13px", color:"var(--text-secondary)" }}>
+          <span style={{ fontWeight:"600", color:"var(--text-primary)" }}>💡 Example: </span>{example}
+        </div>
+      )}
+
+      {visual && (
+        <div style={{ fontSize:"13px", color:"var(--text-secondary)", marginBottom:"12px" }}>
+          <span style={{ fontWeight:"600" }}>🖼 Visual: </span>{visual}
+        </div>
+      )}
+
+      {narration && (
+        <div style={{ background:`${color}15`, border:`1px solid ${color}30`, borderRadius:"8px", padding:"12px 14px" }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"6px" }}>
+            <span style={{ fontSize:"12px", fontWeight:"700", color:color }}>🎙 NARRATION (Speaker Notes)</span>
+            <button onClick={copyNarration} style={{ fontSize:"11px", padding:"4px 10px", background:color, color:"#fff", border:"none", borderRadius:"6px", cursor:"pointer", fontWeight:"600" }}>
+              {copied ? "✓ Copied!" : "Copy"}
+            </button>
+          </div>
+          <div style={{ fontSize:"14px", color:"var(--text-primary)", lineHeight:"1.6", fontStyle:"italic" }}>{narration}</div>
+        </div>
+      )}
+
+      {cta && (
+        <div style={{ marginTop:"10px", fontSize:"14px", color:"var(--text-secondary)" }}>
+          <span style={{ fontWeight:"600", color:"var(--text-primary)" }}>🚀 Call to Action: </span>{cta}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── PROGRESS VIEW ────────────────────────────────────────────────────────────
 function ProgressView({ subject, grade }) {
   const key = "ai_tutor_progress_v2";
@@ -2669,10 +2816,15 @@ function SubjectPage({ profile, onHome }) {
   }, [profile.subject]);
 
   // Video view state
-  const [viewMode, setViewMode] = useState("lesson"); // "lesson" | "videos" | "flashcards" | "practice" | "progress"
+  const [viewMode, setViewMode] = useState("lesson"); // "lesson" | "videos" | "flashcards" | "practice" | "progress" | "canva"
   const [videoList, setVideoList] = useState([]);
   const [loadingVideos, setLoadingVideos] = useState(false);
   const [selectedVideo, setSelectedVideo] = useState(null); // For modal video player
+
+  // Canva slide state
+  const [canvaSlides, setCanvaSlides] = useState(null);
+  const [canvaLoading, setCanvaLoading] = useState(false);
+  const [canvaError, setCanvaError] = useState(null);
 
   // Grade helpers
   const isEarlyGrade = ["Grade 1","Grade 2","Grade 3"].includes(profile.grade);
@@ -2984,6 +3136,40 @@ function SubjectPage({ profile, onHome }) {
   };
 
   // Fetch videos for a topic from YouTube
+  const generateCanvaVideo = async () => {
+    setCanvaLoading(true);
+    setCanvaError(null);
+    setCanvaSlides(null);
+    try {
+      const lessonText = messages
+        .filter(m => m.role === "assistant")
+        .map(m => typeof m.content === "string" ? m.content : "")
+        .join("\n\n")
+        .slice(0, 3000);
+      const res = await fetch(`${API}/api/canva/video`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          subject: activeSubject,
+          grade: profile.grade,
+          topics: topicList,          // all lesson topics
+          lesson_content: lessonText, // existing explanations
+        })
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.error) setCanvaError(data.error);
+        else setCanvaSlides(data);
+      } else {
+        setCanvaError("Could not generate video script. Try again.");
+      }
+    } catch (err) {
+      setCanvaError("Network error. Please try again.");
+    } finally {
+      setCanvaLoading(false);
+    }
+  };
+
   const fetchVideosForTopic = async (topic) => {
     setLoadingVideos(true);
     try {
@@ -3892,6 +4078,7 @@ function SubjectPage({ profile, onHome }) {
                 { id:"flashcards",label:"📇 Flashcards" },
                 { id:"practice",  label:"📝 Test" },
                 { id:"progress",  label:"📊 Progress" },
+                { id:"canva",     label:"🎨 Canva",     onClick: () => { generateCanvaVideo(); } },
               ].map(tab => (
                 <button key={tab.id}
                   onClick={() => { setViewMode(tab.id); tab.onClick?.(); }}
@@ -4223,6 +4410,17 @@ function SubjectPage({ profile, onHome }) {
         {/* Progress View */}
         {viewMode === "progress" && (
           <ProgressView subject={activeSubject} grade={profile.grade} />
+        )}
+
+        {/* Canva View */}
+        {viewMode === "canva" && (
+          <CanvaLessonView
+            slides={canvaSlides}
+            loading={canvaLoading}
+            error={canvaError}
+            topic={activeTopic || activeSubject}
+            onRetry={() => { setCanvaSlides(null); generateCanvaLesson(); }}
+          />
         )}
 
         {/* Limit Exceeded Message */}

@@ -658,6 +658,95 @@ FRONTEND_DIST = Path(__file__).parent.parent / "frontend" / "dist"
 if FRONTEND_DIST.exists():
     app.mount("/assets", StaticFiles(directory=FRONTEND_DIST / "assets"), name="assets")
 
+# ═══════════════════════════════════════════════════════════════════════════
+# CANVA VIDEO GENERATION
+# ═══════════════════════════════════════════════════════════════════════════
+
+class CanvaVideoRequest(BaseModel):
+    subject: str
+    grade: str
+    topics: list       # full topic list for the lesson
+    lesson_content: str = ""   # chat/explanation text already generated
+
+@app.post("/api/canva/video")
+async def canva_video(req: CanvaVideoRequest):
+    """
+    Takes ALL lesson topics + existing lesson content and generates a
+    complete video presentation script: one slide per topic, with narration,
+    key points, and visual cues — ready to paste into Canva's video editor.
+    """
+    import json
+    from openai import OpenAI
+    client = OpenAI(api_key=os.getenv("OPENAI_API_KEY", "").strip())
+
+    topics_list = "\n".join(f"- {t}" for t in req.topics[:15])
+
+    prompt = f"""You are an expert educational video creator.
+
+Create a complete VIDEO presentation script for a {req.grade} {req.subject} lesson.
+
+LESSON TOPICS:
+{topics_list}
+
+EXISTING LESSON CONTENT (use this as reference):
+{req.lesson_content[:3000] if req.lesson_content else "Not yet generated — use your knowledge."}
+
+Generate a video with one slide per topic. Return ONLY valid JSON (no markdown):
+{{
+  "video_title": "full video title",
+  "subject": "{req.subject}",
+  "grade": "{req.grade}",
+  "total_duration": "estimated duration e.g. 8-10 minutes",
+  "intro_slide": {{
+    "heading": "Welcome to [Subject]!",
+    "narration": "2-3 sentence spoken introduction for the teacher/narrator",
+    "visual_cue": "what to show on screen"
+  }},
+  "topic_slides": [
+    {{
+      "topic": "topic name",
+      "heading": "slide heading",
+      "key_points": ["point 1", "point 2", "point 3"],
+      "narration": "3-4 sentences the narrator speaks for this topic",
+      "example": "a simple real-world example",
+      "visual_cue": "what image or graphic to show",
+      "duration": "30-60 seconds"
+    }}
+  ],
+  "summary_slide": {{
+    "heading": "What We Learned Today",
+    "recap_points": ["recap 1", "recap 2", "recap 3"],
+    "narration": "closing narration 2-3 sentences",
+    "call_to_action": "what students should do next"
+  }},
+  "canva_template_search": "search term to find a matching Canva video template"
+}}
+
+Make the narration engaging, grade-appropriate for {req.grade}, and cover EVERY topic listed."""
+
+    try:
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=3500,
+        )
+        raw = response.choices[0].message.content.strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"):
+                raw = raw[4:]
+            raw = raw.rsplit("```", 1)[0]
+        data = json.loads(raw.strip())
+        canva_app_id = os.getenv("CANVA_APP_ID", "")
+        search = data.get("canva_template_search", "educational video presentation")
+        data["canva_video_url"] = f"https://www.canva.com/create/videos/"
+        data["canva_template_url"] = f"https://www.canva.com/templates/?query={search.replace(' ', '+')}"
+        if canva_app_id:
+            data["canva_app_url"] = f"https://www.canva.com/design/new?app={canva_app_id}"
+        return data
+    except Exception as e:
+        return {"error": str(e), "topic_slides": []}
+
 @app.get("/")
 async def root():
     index_file = FRONTEND_DIST / "index.html"
