@@ -2494,116 +2494,194 @@ function PracticeTestView({ topic, grade, subject, apiUrl, onScoreSave }) {
 
 // ─── CANVA VIDEO VIEW ─────────────────────────────────────────────────────────
 // ─── CANVA VIDEO PLAYER ───────────────────────────────────────────────────────
+// ── Animated diagram renderer ─────────────────────────────────────────────────
+function SceneDiagram({ diagram, themeColor }) {
+  if (!diagram || diagram.type === "none" || !diagram.elements?.length) return null;
+  const items = diagram.elements.slice(0, 5);
+  const tc = themeColor || "#00C4CC";
+
+  if (diagram.type === "cycle") {
+    const cx = 110, cy = 90, r = 65;
+    const pts = items.map((_, i) => {
+      const a = (i / items.length) * 2 * Math.PI - Math.PI / 2;
+      return [cx + r * Math.cos(a), cy + r * Math.sin(a)];
+    });
+    return (
+      <svg viewBox="0 0 220 180" width="100%" style={{ maxWidth:"240px" }}>
+        <style>{`@keyframes rotateSlow{from{transform-origin:110px 90px;transform:rotate(0deg)}to{transform-origin:110px 90px;transform:rotate(360deg)}}`}</style>
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke={tc+"33"} strokeWidth="1.5" strokeDasharray="6 4" style={{ animation:"rotateSlow 20s linear infinite" }}/>
+        {pts.map(([x,y], i) => {
+          const next = pts[(i+1) % pts.length];
+          const mx = (x + next[0]) / 2 - (next[1]-y)*0.2, my = (y+next[1])/2 + (next[0]-x)*0.2;
+          return <path key={i} d={`M${x},${y} Q${mx},${my} ${next[0]},${next[1]}`} fill="none" stroke={tc+"66"} strokeWidth="1.2" markerEnd="url(#arr)"/>;
+        })}
+        <defs><marker id="arr" markerWidth="5" markerHeight="5" refX="3" refY="2.5" orient="auto"><path d="M0,0 L0,5 L5,2.5z" fill={tc}/></marker></defs>
+        {pts.map(([x,y], i) => (
+          <g key={i}>
+            <circle cx={x} cy={y} r="20" fill={tc+"22"} stroke={tc} strokeWidth="1.5"/>
+            <text x={x} y={y+4} textAnchor="middle" fill="#fff" fontSize="8" fontWeight="700" fontFamily="Nunito">{items[i].split(' ').slice(0,2).join('\n')}</text>
+          </g>
+        ))}
+        {diagram.title && <text x={cx} y={cy+5} textAnchor="middle" fill={tc} fontSize="9" fontWeight="800" fontFamily="Nunito">{diagram.title}</text>}
+      </svg>
+    );
+  }
+
+  if (diagram.type === "layers") {
+    return (
+      <svg viewBox="0 0 220 170" width="100%" style={{ maxWidth:"240px" }}>
+        {items.map((item, i) => {
+          const w = 200 - i * 24, x = 10 + i * 12, y = 10 + i * 30;
+          return (
+            <g key={i}>
+              <rect x={x} y={y} width={w} height={24} rx="4" fill={tc+"22"} stroke={tc} strokeWidth="1.3" opacity={1 - i*0.1}/>
+              <text x={110} y={y+15} textAnchor="middle" fill="#fff" fontSize="9" fontWeight="700" fontFamily="Nunito">{item}</text>
+            </g>
+          );
+        })}
+      </svg>
+    );
+  }
+
+  if (diagram.type === "comparison") {
+    const half = Math.ceil(items.length / 2);
+    const left = items.slice(0, half), right = items.slice(half);
+    return (
+      <svg viewBox="0 0 240 160" width="100%" style={{ maxWidth:"260px" }}>
+        <rect x="4" y="4" width="106" height="152" rx="8" fill="#6366f133" stroke="#6366f1" strokeWidth="1.3"/>
+        <rect x="130" y="4" width="106" height="152" rx="8" fill={tc+"22"} stroke={tc} strokeWidth="1.3"/>
+        <text x="57" y="20" textAnchor="middle" fill="#a5b4fc" fontSize="9" fontWeight="800" fontFamily="Nunito">{left[0] || "A"}</text>
+        <text x="183" y="20" textAnchor="middle" fill={tc} fontSize="9" fontWeight="800" fontFamily="Nunito">{right[0] || "B"}</text>
+        {left.slice(1).map((t,i) => <text key={i} x="57" y={40+i*24} textAnchor="middle" fill="rgba(255,255,255,0.8)" fontSize="8" fontFamily="Nunito">{t}</text>)}
+        {right.slice(1).map((t,i) => <text key={i} x="183" y={40+i*24} textAnchor="middle" fill="rgba(255,255,255,0.8)" fontSize="8" fontFamily="Nunito">{t}</text>)}
+        <text x="120" y="84" textAnchor="middle" fill="rgba(255,255,255,0.3)" fontSize="18" fontWeight="900" fontFamily="Nunito">VS</text>
+      </svg>
+    );
+  }
+
+  if (diagram.type === "flowchart") {
+    return (
+      <svg viewBox="0 0 180 200" width="100%" style={{ maxWidth:"200px" }}>
+        <defs><marker id="farr" markerWidth="5" markerHeight="5" refX="3" refY="2.5" orient="auto"><path d="M0,0 L0,5 L5,2.5z" fill={tc+"88"}/></marker></defs>
+        {items.map((item, i) => (
+          <g key={i}>
+            <rect x="15" y={8 + i*38} width="150" height="26" rx="6" fill={tc+"22"} stroke={tc} strokeWidth="1.3"/>
+            <text x="90" y={25 + i*38} textAnchor="middle" fill="#fff" fontSize="9" fontWeight="700" fontFamily="Nunito">{item}</text>
+            {i < items.length-1 && <line x1="90" y1={34+i*38} x2="90" y2={46+i*38} stroke={tc+"88"} strokeWidth="1.5" markerEnd="url(#farr)"/>}
+          </g>
+        ))}
+      </svg>
+    );
+  }
+
+  if (diagram.type === "timeline") {
+    return (
+      <svg viewBox="0 0 260 110" width="100%" style={{ maxWidth:"280px" }}>
+        <line x1="20" y1="55" x2="240" y2="55" stroke={tc+"55"} strokeWidth="2"/>
+        {items.map((item, i) => {
+          const x = 20 + (i / Math.max(items.length-1,1)) * 220;
+          return (
+            <g key={i}>
+              <circle cx={x} cy="55" r="7" fill={tc} opacity="0.85"/>
+              <text x={x} y={i%2===0 ? "40" : "80"} textAnchor="middle" fill="rgba(255,255,255,0.85)" fontSize="8" fontWeight="700" fontFamily="Nunito">{item.split(' ').slice(0,3).join(' ')}</text>
+              <line x1={x} y1={i%2===0 ? "62" : "48"} x2={x} y2={i%2===0 ? "44" : "66"} stroke={tc+"66"} strokeWidth="1"/>
+            </g>
+          );
+        })}
+      </svg>
+    );
+  }
+
+  // bubbles (default)
+  const pos = [[110,70],[55,115],[165,115],[40,38],[180,38]];
+  return (
+    <svg viewBox="0 0 220 160" width="100%" style={{ maxWidth:"240px" }}>
+      {items.map((item, i) => {
+        const [x,y] = pos[i] || [110,80];
+        return (
+          <g key={i}>
+            <circle cx={x} cy={y} r="32" fill={tc+"1a"} stroke={tc} strokeWidth="1.3"/>
+            <text x={x} y={y+4} textAnchor="middle" fill="#fff" fontSize="8" fontWeight="700" fontFamily="Nunito">{item.split(' ').slice(0,3).join(' ')}</text>
+          </g>
+        );
+      })}
+      {diagram.title && <text x="110" y="155" textAnchor="middle" fill={tc+"99"} fontSize="9" fontFamily="Nunito">{diagram.title}</text>}
+    </svg>
+  );
+}
+
+// ── Animated Video Lesson ─────────────────────────────────────────────────────
 function CanvaLessonView({ slides, loading, error, topic, onRetry }) {
   const TEAL   = "#00C4CC";
   const PURPLE = "#7B2FBE";
-  const DARK   = "#0d1117";
-  const BOARD  = "#0f1923";
 
-  const sections = React.useMemo(() => {
+  const THEME = {
+    lab:       { bg:"linear-gradient(135deg,#061a0e 0%,#0d2a1a 60%,#061220 100%)", accent:"#4ade80", emoji:"🔬" },
+    space:     { bg:"linear-gradient(135deg,#04061a 0%,#0a0f3d 60%,#150930 100%)", accent:"#818cf8", emoji:"🌌" },
+    nature:    { bg:"linear-gradient(135deg,#061400 0%,#0f2200 60%,#061808 100%)", accent:"#86efac", emoji:"🌿" },
+    city:      { bg:"linear-gradient(135deg,#1a0e00 0%,#2d1800 60%,#120800 100%)", accent:"#fbbf24", emoji:"🏙" },
+    classroom: { bg:"linear-gradient(135deg,#0a0614 0%,#130a28 60%,#070d1c 100%)", accent:TEAL,      emoji:"🎓" },
+  };
+
+  const scenes = React.useMemo(() => {
     if (!slides) return [];
+    if (slides.scenes?.length > 0) return slides.scenes;
+    // legacy format fallback
     const list = [];
-    if (slides.intro_slide) list.push({
-      label: "Introduction", type: "intro",
-      heading: slides.intro_slide.heading,
-      narration: slides.intro_slide.narration,
-      points: [],
-      visual: slides.intro_slide.visual_cue,
-    });
-    (slides.topic_slides || []).forEach((s) => list.push({
-      label: s.topic || s.heading, type: "topic",
-      heading: s.heading,
-      narration: s.narration,
-      points: s.key_points || [],
-      example: s.example,
-      visual: s.visual_cue,
-      duration: s.duration,
-    }));
-    if (slides.summary_slide) list.push({
-      label: "Summary", type: "summary",
-      heading: slides.summary_slide.heading,
-      narration: slides.summary_slide.narration,
-      points: slides.summary_slide.recap_points || [],
-      cta: slides.summary_slide.call_to_action,
-    });
+    if (slides.intro_slide) list.push({ id:0, type:"intro", title:slides.intro_slide.heading, narration:slides.intro_slide.narration, visual_theme:"classroom", diagram:{type:"none",elements:[]}, key_fact:"", bg_emoji:"🎬" });
+    (slides.topic_slides||[]).forEach((s,i) => list.push({ id:i+1, type:"concept", title:s.heading, narration:s.narration, visual_theme:"classroom", diagram:{type:"bubbles",title:s.topic,elements:s.key_points||[]}, key_fact:s.example||"", bg_emoji:"📖" }));
+    if (slides.summary_slide) list.push({ id:list.length, type:"summary", title:slides.summary_slide.heading, narration:slides.summary_slide.narration, visual_theme:"classroom", diagram:{type:"none",elements:[]}, key_fact:slides.summary_slide.call_to_action||"", bg_emoji:"✅" });
     return list;
   }, [slides]);
 
-  const total = sections.length;
-  const [idx, setIdx]           = React.useState(0);
-  const [playing, setPlaying]   = React.useState(false);
-  const [paused,  setPaused]    = React.useState(false);
+  const total = scenes.length;
+  const [idx, setIdx]         = React.useState(0);
+  const [playing, setPlaying] = React.useState(false);
+  const [paused, setPaused]   = React.useState(false);
   const [speaking, setSpeaking] = React.useState(false);
   const synthRef = React.useRef(typeof window !== "undefined" ? window.speechSynthesis : null);
 
-  const section = sections[idx] || {};
+  const scene = scenes[idx] || {};
+  const theme = THEME[scene.visual_theme] || THEME.classroom;
 
   const getBestVoice = () => {
     const voices = synthRef.current?.getVoices() || [];
-    return (
-      voices.find(v => v.name === "Google UK English Female") ||
-      voices.find(v => /zira|karen|moira|samantha|victoria/i.test(v.name)) ||
-      voices.find(v => /female/i.test(v.name) && v.lang.startsWith("en")) ||
-      voices.find(v => v.lang.startsWith("en")) ||
-      voices[0] || null
-    );
+    return voices.find(v => v.name === "Google UK English Female") || voices.find(v => /zira|karen|moira|samantha/i.test(v.name)) || voices.find(v => /female/i.test(v.name) && v.lang?.startsWith("en")) || voices.find(v => v.lang?.startsWith("en")) || voices[0] || null;
   };
 
-  const speakSection = React.useCallback((secIdx, autoAdvance = true) => {
-    const synth = synthRef.current;
-    if (!synth) return;
+  const speakScene = React.useCallback((si, auto = true) => {
+    const synth = synthRef.current; if (!synth) return;
     synth.cancel();
-    const s = sections[secIdx];
-    if (!s?.narration) return;
+    const s = scenes[si]; if (!s?.narration) return;
     const utter = new SpeechSynthesisUtterance(s.narration);
     utter.rate = 0.88; utter.pitch = 1.05; utter.volume = 1.0;
-    const voice = getBestVoice();
-    if (voice) utter.voice = voice;
+    const v = getBestVoice(); if (v) utter.voice = v;
     setSpeaking(true);
     utter.onend = () => {
       setSpeaking(false);
-      if (!autoAdvance) return;
-      const next = secIdx + 1;
-      if (next < sections.length) {
-        setTimeout(() => { setIdx(next); speakSection(next, true); }, 600);
-      } else {
-        setPlaying(false); setPaused(false);
-      }
+      if (!auto) return;
+      const next = si + 1;
+      if (next < scenes.length) { setTimeout(() => { setIdx(next); speakScene(next, true); }, 700); }
+      else { setPlaying(false); setPaused(false); }
     };
     utter.onerror = () => { setSpeaking(false); setPlaying(false); };
     synth.speak(utter);
-  }, [sections]);
+  }, [scenes]);
 
-  const handlePlay = () => {
-    const synth = synthRef.current;
-    if (paused && synth?.paused) { synth.resume(); setPaused(false); setPlaying(true); return; }
-    setPlaying(true); setPaused(false);
-    speakSection(idx, true);
-  };
+  const handlePlay  = () => { const s = synthRef.current; if (paused && s?.paused) { s.resume(); setPaused(false); setPlaying(true); return; } setPlaying(true); setPaused(false); speakScene(idx, true); };
   const handlePause = () => { synthRef.current?.pause(); setPlaying(false); setPaused(true); setSpeaking(false); };
   const handleStop  = () => { synthRef.current?.cancel(); setPlaying(false); setPaused(false); setSpeaking(false); setIdx(0); };
-  const handlePrev  = () => {
-    synthRef.current?.cancel(); setSpeaking(false);
-    const prev = Math.max(0, idx - 1); setIdx(prev);
-    if (playing) speakSection(prev, true);
-  };
-  const handleNext  = () => {
-    synthRef.current?.cancel(); setSpeaking(false);
-    const next = Math.min(total - 1, idx + 1); setIdx(next);
-    if (playing) speakSection(next, true);
-  };
-  const handleSeek  = (i) => {
-    synthRef.current?.cancel(); setSpeaking(false); setIdx(i);
-    if (playing) speakSection(i, true);
-  };
+  const handlePrev  = () => { synthRef.current?.cancel(); setSpeaking(false); const p=Math.max(0,idx-1); setIdx(p); if(playing) speakScene(p,true); };
+  const handleNext  = () => { synthRef.current?.cancel(); setSpeaking(false); const n=Math.min(total-1,idx+1); setIdx(n); if(playing) speakScene(n,true); };
+  const handleSeek  = (i) => { synthRef.current?.cancel(); setSpeaking(false); setIdx(i); if(playing) speakScene(i,true); };
 
   React.useEffect(() => () => synthRef.current?.cancel(), []);
 
   if (loading) return (
     <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"60px 20px", gap:"16px" }}>
-      <div style={{ fontSize:"52px", animation:"spin 1.5s linear infinite" }}>🎓</div>
-      <div style={{ fontSize:"18px", fontWeight:"700", color:"var(--text-primary)" }}>Preparing your lesson...</div>
-      <div style={{ fontSize:"14px", color:"var(--text-secondary)" }}>Setting up teacher voice and lesson content</div>
+      <div style={{ fontSize:"52px", animation:"spin 1.5s linear infinite" }}>🎬</div>
+      <div style={{ fontSize:"18px", fontWeight:"700", color:"var(--text-primary)" }}>Creating your animated lesson video...</div>
+      <div style={{ fontSize:"14px", color:"var(--text-secondary)" }}>Generating scenes, diagrams and teacher narration</div>
     </div>
   );
 
@@ -2617,169 +2695,117 @@ function CanvaLessonView({ slides, loading, error, topic, onRetry }) {
 
   if (!slides || total === 0) return null;
 
-  const sectionColor = section.type === "intro" ? "#6366f1" : section.type === "summary" ? "#10b981" : TEAL;
+  const pct = ((idx + (speaking ? 0.5 : 0)) / Math.max(total,1)) * 100;
 
   return (
-    <div style={{ padding:"12px", maxWidth:"820px", margin:"0 auto" }}>
+    <div style={{ padding:"12px", maxWidth:"860px", margin:"0 auto" }}>
       <style>{`
-        @keyframes teacherBob { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-8px) scale(1.05)} }
-        @keyframes mouthTalk  { 0%,100%{transform:scaleY(1)} 50%{transform:scaleY(0.3)} }
-        @keyframes soundBar   { 0%,100%{transform:scaleY(0.3)} 50%{transform:scaleY(1)} }
-        @keyframes textIn     { from{opacity:0;transform:translateX(-10px)} to{opacity:1;transform:translateX(0)} }
-        @keyframes boardPulse { 0%,100%{box-shadow:0 0 0 0 rgba(0,196,204,0)} 50%{box-shadow:0 0 0 6px rgba(0,196,204,0.1)} }
+        @keyframes teacherBob{0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-10px) scale(1.06)}}
+        @keyframes sBar{0%,100%{transform:scaleY(0.3)}50%{transform:scaleY(1)}}
+        @keyframes sceneIn{from{opacity:0;transform:scale(0.97)}to{opacity:1;transform:scale(1)}}
+        @keyframes factPop{0%{transform:scale(0.8);opacity:0}70%{transform:scale(1.05)}100%{transform:scale(1);opacity:1}}
+        @keyframes starFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+        @keyframes diagramIn{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}
       `}</style>
 
-      {/* ── Classroom container ── */}
-      <div style={{ background:DARK, borderRadius:"20px", overflow:"hidden", boxShadow:"0 12px 50px rgba(0,0,0,0.7)" }}>
+      {/* ── Video container (16:9 feel) ── */}
+      <div style={{ borderRadius:"20px", overflow:"hidden", boxShadow:"0 16px 60px rgba(0,0,0,0.8)", border:"1px solid rgba(255,255,255,0.08)" }}>
 
-        {/* ── Top bar ── */}
-        <div style={{ background:`linear-gradient(90deg, ${PURPLE}, ${TEAL})`, padding:"12px 20px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+        {/* Title bar */}
+        <div style={{ background:`linear-gradient(90deg,${PURPLE},${theme.accent})`, padding:"10px 20px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
           <div>
-            <div style={{ color:"#fff", fontWeight:"800", fontSize:"15px" }}>{slides.video_title}</div>
-            <div style={{ color:"rgba(255,255,255,0.75)", fontSize:"12px" }}>{slides.grade} · {slides.subject} · {slides.total_duration}</div>
+            <div style={{ color:"#fff", fontWeight:"900", fontSize:"14px" }}>{slides.video_title}</div>
+            <div style={{ color:"rgba(255,255,255,0.7)", fontSize:"11px" }}>{slides.grade} · {slides.subject} · {slides.total_duration}</div>
           </div>
-          <div style={{ background:"rgba(0,0,0,0.25)", borderRadius:"8px", padding:"4px 10px", color:"rgba(255,255,255,0.9)", fontSize:"12px", fontWeight:"600" }}>
-            📚 {section.label}
+          <div style={{ fontSize:"11px", color:"rgba(255,255,255,0.8)", fontWeight:"700" }}>
+            Scene {idx+1}/{total}
           </div>
         </div>
 
-        {/* ── Continuous progress bar ── */}
-        <div style={{ height:"3px", background:"rgba(255,255,255,0.08)" }}>
-          <div style={{ height:"100%", width:`${((idx + (speaking ? 0.5 : 0)) / Math.max(total,1)) * 100}%`, background:`linear-gradient(90deg,${PURPLE},${TEAL})`, transition:"width 0.8s ease" }} />
+        {/* Progress bar */}
+        <div style={{ height:"3px", background:"rgba(255,255,255,0.1)" }}>
+          <div style={{ height:"100%", width:`${pct}%`, background:`linear-gradient(90deg,${PURPLE},${theme.accent})`, transition:"width 1s ease" }}/>
         </div>
 
-        {/* ── Main classroom: teacher + whiteboard ── */}
-        <div style={{ display:"flex", minHeight:"320px" }}>
+        {/* ── Main scene area ── */}
+        <div key={idx} style={{ background:theme.bg, minHeight:"340px", display:"flex", flexDirection:"column", animation:"sceneIn 0.5s ease both", position:"relative", overflow:"hidden" }}>
 
-          {/* Teacher panel */}
-          <div style={{ width:"120px", flexShrink:0, background:"#0a0f1a", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"20px 8px", borderRight:"1px solid rgba(255,255,255,0.06)", gap:"10px" }}>
-            {/* Avatar */}
-            <div style={{ fontSize:"54px", lineHeight:1, animation: speaking ? "teacherBob 0.6s ease infinite" : "none", userSelect:"none" }}>
-              🧑‍🏫
-            </div>
-            {/* Sound bars */}
-            <div style={{ display:"flex", gap:"3px", alignItems:"flex-end", height:"22px" }}>
-              {[0,1,2,3,4].map(i => (
-                <div key={i} style={{
-                  width:"3px", borderRadius:"2px",
-                  background: speaking ? TEAL : "rgba(255,255,255,0.15)",
-                  height: speaking ? `${[8,14,20,12,8][i]}px` : "4px",
-                  animation: speaking ? `soundBar 0.5s ease infinite ${i * 0.08}s` : "none",
-                  transition:"height 0.3s, background 0.3s",
-                  transformOrigin:"bottom"
-                }} />
-              ))}
-            </div>
-            {/* Status */}
-            <div style={{ color: speaking ? TEAL : "rgba(255,255,255,0.3)", fontSize:"10px", fontWeight:"700", textAlign:"center", letterSpacing:"0.5px", transition:"color 0.3s" }}>
-              {speaking ? "TEACHING" : paused ? "PAUSED" : playing ? "READY" : "PRESS ▶"}
-            </div>
+          {/* Floating bg emoji (decorative) */}
+          <div style={{ position:"absolute", top:"12px", right:"16px", fontSize:"60px", opacity:0.07, animation:"starFloat 6s ease infinite", userSelect:"none" }}>
+            {scene.bg_emoji || theme.emoji}
           </div>
 
-          {/* Whiteboard */}
-          <div key={idx} style={{ flex:1, background:BOARD, padding:"22px 26px", position:"relative", animation:"boardPulse 2s ease infinite", overflow:"hidden" }}>
-            {/* Section type label */}
-            <div style={{ color:sectionColor, fontSize:"10px", fontWeight:"800", textTransform:"uppercase", letterSpacing:"2px", marginBottom:"8px", animation:"textIn 0.4s ease both" }}>
-              {section.type === "intro" ? "▶ Introduction" : section.type === "summary" ? "✅ Summary" : `📖 ${section.label}`}
-            </div>
+          {/* Scene layout: teacher left + content right */}
+          <div style={{ display:"flex", flex:1, minHeight:"300px" }}>
 
-            {/* Main heading */}
-            <div style={{ color:"#fff", fontSize:"19px", fontWeight:"800", marginBottom:"16px", lineHeight:"1.35", animation:"textIn 0.4s ease 0.05s both" }}>
-              {section.heading}
-            </div>
-
-            {/* Key points — teacher writes them like a whiteboard */}
-            {section.points?.length > 0 && (
-              <div style={{ marginBottom:"14px" }}>
-                {section.points.map((p, i) => (
-                  <div key={i} style={{ display:"flex", gap:"10px", marginBottom:"9px", color:"rgba(255,255,255,0.88)", fontSize:"14px", lineHeight:"1.6", animation:`textIn 0.4s ease ${0.1 + i*0.07}s both` }}>
-                    <span style={{ color:TEAL, fontWeight:"700", fontSize:"16px", lineHeight:"1.4", flexShrink:0 }}>→</span>
-                    <span>{p}</span>
-                  </div>
+            {/* Teacher column */}
+            <div style={{ width:"110px", flexShrink:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"16px 8px", gap:"8px", borderRight:"1px solid rgba(255,255,255,0.05)" }}>
+              <div style={{ fontSize:"52px", lineHeight:1, animation:speaking?"teacherBob 0.55s ease infinite":"none", userSelect:"none" }}>🧑‍🏫</div>
+              <div style={{ display:"flex", gap:"3px", alignItems:"flex-end", height:"20px" }}>
+                {[8,14,20,14,8].map((h,i) => (
+                  <div key={i} style={{ width:"3px", borderRadius:"2px", background:speaking?theme.accent:"rgba(255,255,255,0.12)", height:speaking?`${h}px`:"3px", animation:speaking?`sBar 0.5s ease infinite ${i*0.09}s`:"none", transition:"height 0.3s,background 0.3s", transformOrigin:"bottom" }}/>
                 ))}
               </div>
-            )}
-
-            {/* Example box */}
-            {section.example && (
-              <div style={{ background:"rgba(0,196,204,0.08)", borderRadius:"8px", padding:"10px 14px", marginBottom:"10px", fontSize:"13px", color:"rgba(255,255,255,0.85)", borderLeft:`3px solid ${TEAL}`, animation:"textIn 0.4s ease 0.3s both" }}>
-                <span style={{ fontWeight:"700", color:TEAL }}>💡 Example: </span>{section.example}
+              <div style={{ color:speaking?theme.accent:"rgba(255,255,255,0.25)", fontSize:"9px", fontWeight:"800", letterSpacing:"0.5px", textAlign:"center", transition:"color 0.3s" }}>
+                {speaking?"LIVE":paused?"PAUSED":"READY"}
               </div>
-            )}
+            </div>
 
-            {/* Call to action (summary only) */}
-            {section.cta && (
-              <div style={{ background:"rgba(16,185,129,0.1)", borderRadius:"8px", padding:"10px 14px", fontSize:"13px", color:"rgba(255,255,255,0.85)", borderLeft:"3px solid #10b981", animation:"textIn 0.4s ease 0.35s both" }}>
-                <span style={{ fontWeight:"700", color:"#10b981" }}>🚀 </span>{section.cta}
-              </div>
-            )}
+            {/* Content: title + diagram + narration preview */}
+            <div style={{ flex:1, padding:"20px 22px", display:"flex", flexDirection:"column", gap:"12px" }}>
 
-            {/* Visual cue hint (subtle watermark) */}
-            {section.visual && (
-              <div style={{ position:"absolute", bottom:"10px", right:"14px", color:"rgba(255,255,255,0.12)", fontSize:"11px", fontStyle:"italic", maxWidth:"180px", textAlign:"right" }}>
-                {section.visual}
+              {/* Scene type badge + title */}
+              <div>
+                <div style={{ display:"inline-block", background:theme.accent+"22", color:theme.accent, borderRadius:"5px", padding:"2px 8px", fontSize:"9px", fontWeight:"800", letterSpacing:"1.5px", textTransform:"uppercase", marginBottom:"6px" }}>
+                  {scene.type === "intro" ? "▶ INTRO" : scene.type === "summary" ? "✅ SUMMARY" : "📽 SCENE"}
+                </div>
+                <div style={{ color:"#fff", fontSize:"20px", fontWeight:"900", lineHeight:"1.25" }}>{scene.title}</div>
               </div>
-            )}
+
+              {/* Diagram */}
+              {scene.diagram?.type && scene.diagram.type !== "none" && scene.diagram.elements?.length > 0 && (
+                <div style={{ display:"flex", flexDirection:"column", alignItems:"center", animation:"diagramIn 0.5s ease 0.2s both" }}>
+                  {scene.diagram.title && (
+                    <div style={{ color:theme.accent, fontSize:"10px", fontWeight:"800", textTransform:"uppercase", letterSpacing:"1px", marginBottom:"6px" }}>{scene.diagram.title}</div>
+                  )}
+                  <SceneDiagram diagram={scene.diagram} themeColor={theme.accent} />
+                </div>
+              )}
+
+              {/* Key fact callout */}
+              {scene.key_fact && (
+                <div style={{ background:theme.accent+"15", border:`1px solid ${theme.accent}44`, borderRadius:"8px", padding:"8px 12px", fontSize:"12px", color:theme.accent, fontWeight:"700", animation:"factPop 0.5s ease 0.3s both" }}>
+                  ⚡ {scene.key_fact}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Subtitle bar */}
+          <div style={{ background:"rgba(0,0,0,0.55)", backdropFilter:"blur(4px)", padding:"10px 20px", display:"flex", gap:"10px", alignItems:"flex-start", minHeight:"50px", borderTop:"1px solid rgba(255,255,255,0.06)" }}>
+            <span style={{ fontSize:"14px", marginTop:"2px" }}>🎙</span>
+            <div style={{ fontSize:"13px", color:speaking?"rgba(255,255,255,0.92)":"rgba(255,255,255,0.35)", fontStyle:"italic", lineHeight:"1.55", flex:1, transition:"color 0.3s" }}>
+              {speaking ? scene.narration : paused ? "⏸  Paused — press ▶ to continue" : "Press ▶ Play to watch your animated lesson"}
+            </div>
           </div>
         </div>
 
-        {/* ── Teacher narration bar (like subtitles) ── */}
-        <div style={{ background:"rgba(255,255,255,0.04)", borderTop:"1px solid rgba(255,255,255,0.07)", padding:"10px 20px", display:"flex", alignItems:"flex-start", gap:"10px", minHeight:"52px" }}>
-          <span style={{ fontSize:"15px", marginTop:"1px", animation: speaking ? "mouthTalk 0.5s ease infinite" : "none" }}>🎙</span>
-          <div style={{ fontSize:"13px", color: speaking ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.38)", fontStyle:"italic", lineHeight:"1.6", flex:1, transition:"color 0.3s" }}>
-            {speaking
-              ? section.narration
-              : paused
-              ? "⏸  Paused — press ▶ Play to continue the lesson"
-              : "Press ▶ Play below to start — your teacher will explain the lesson aloud"}
-          </div>
+        {/* ── Controls ── */}
+        <div style={{ background:"#0a0a14", padding:"14px 20px", display:"flex", justifyContent:"center", alignItems:"center", gap:"12px" }}>
+          <button onClick={handlePrev} disabled={idx===0} title="Previous scene" style={{ width:"40px", height:"40px", borderRadius:"50%", border:`1.5px solid rgba(255,255,255,${idx===0?".1":".2"})`, background:"transparent", color:idx===0?"rgba(255,255,255,0.15)":"#fff", fontSize:"17px", cursor:idx===0?"not-allowed":"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>⏮</button>
+          <button onClick={handleStop} title="Stop" style={{ width:"40px", height:"40px", borderRadius:"50%", border:"1.5px solid rgba(255,255,255,0.2)", background:"transparent", color:"#fff", fontSize:"14px", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>⏹</button>
+          {(!playing||paused)
+            ? <button onClick={handlePlay} title="Play" style={{ width:"64px", height:"64px", borderRadius:"50%", border:"none", background:`linear-gradient(135deg,${PURPLE},${theme.accent})`, color:"#fff", fontSize:"28px", cursor:"pointer", boxShadow:`0 4px 24px ${PURPLE}88`, display:"flex", alignItems:"center", justifyContent:"center" }}>▶</button>
+            : <button onClick={handlePause} title="Pause" style={{ width:"64px", height:"64px", borderRadius:"50%", border:"none", background:`linear-gradient(135deg,${PURPLE},${theme.accent})`, color:"#fff", fontSize:"24px", cursor:"pointer", boxShadow:`0 4px 24px ${PURPLE}88`, display:"flex", alignItems:"center", justifyContent:"center" }}>⏸</button>
+          }
+          <button onClick={handleNext} disabled={idx===total-1} title="Next scene" style={{ width:"40px", height:"40px", borderRadius:"50%", border:`1.5px solid rgba(255,255,255,${idx===total-1?".1":".2"})`, background:"transparent", color:idx===total-1?"rgba(255,255,255,0.15)":"#fff", fontSize:"17px", cursor:idx===total-1?"not-allowed":"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>⏭</button>
         </div>
 
-        {/* ── Playback controls ── */}
-        <div style={{ display:"flex", justifyContent:"center", alignItems:"center", gap:"12px", padding:"14px 20px" }}>
-          <button onClick={handlePrev} disabled={idx === 0}
-            title="Previous topic"
-            style={{ width:"40px", height:"40px", borderRadius:"50%", border:"2px solid rgba(255,255,255,0.18)", background:"transparent", color: idx===0 ? "rgba(255,255,255,0.18)" : "#fff", fontSize:"17px", cursor: idx===0 ? "not-allowed":"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
-            ⏮
-          </button>
-
-          <button onClick={handleStop} title="Stop & restart"
-            style={{ width:"40px", height:"40px", borderRadius:"50%", border:"2px solid rgba(255,255,255,0.25)", background:"transparent", color:"#fff", fontSize:"15px", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
-            ⏹
-          </button>
-
-          {(!playing || paused) ? (
-            <button onClick={handlePlay} title="Play lesson"
-              style={{ width:"64px", height:"64px", borderRadius:"50%", border:"none", background:`linear-gradient(135deg,${PURPLE},${TEAL})`, color:"#fff", fontSize:"28px", cursor:"pointer", boxShadow:`0 4px 24px rgba(123,47,190,0.6)`, display:"flex", alignItems:"center", justifyContent:"center" }}>
-              ▶
-            </button>
-          ) : (
-            <button onClick={handlePause} title="Pause"
-              style={{ width:"64px", height:"64px", borderRadius:"50%", border:"none", background:`linear-gradient(135deg,${PURPLE},${TEAL})`, color:"#fff", fontSize:"24px", cursor:"pointer", boxShadow:`0 4px 24px rgba(123,47,190,0.6)`, display:"flex", alignItems:"center", justifyContent:"center" }}>
-              ⏸
-            </button>
-          )}
-
-          <button onClick={handleNext} disabled={idx === total - 1} title="Next topic"
-            style={{ width:"40px", height:"40px", borderRadius:"50%", border:"2px solid rgba(255,255,255,0.18)", background:"transparent", color: idx===total-1 ? "rgba(255,255,255,0.18)" : "#fff", fontSize:"17px", cursor: idx===total-1 ? "not-allowed":"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
-            ⏭
-          </button>
-        </div>
-
-        {/* ── Chapter / topic nav (not dots — real topic names) ── */}
-        <div style={{ padding:"0 16px 16px", display:"flex", gap:"6px", flexWrap:"wrap", justifyContent:"center" }}>
-          {sections.map((s, i) => (
-            <button key={i} onClick={() => handleSeek(i)}
-              style={{
-                padding:"5px 12px", borderRadius:"20px", fontSize:"11px", fontWeight:"700", cursor:"pointer", border:"none",
-                background: i === idx
-                  ? `linear-gradient(90deg,${PURPLE},${TEAL})`
-                  : i < idx ? "rgba(0,196,204,0.15)" : "rgba(255,255,255,0.06)",
-                color: i === idx ? "#fff" : i < idx ? TEAL : "rgba(255,255,255,0.45)",
-                transition:"all 0.2s",
-                outline:"none"
-              }}>
-              {i < idx ? "✓ " : i === idx ? "▶ " : ""}{s.label}
+        {/* ── Scene navigation ── */}
+        <div style={{ background:"#070710", padding:"10px 16px 14px", display:"flex", gap:"6px", flexWrap:"wrap", justifyContent:"center" }}>
+          {scenes.map((s,i) => (
+            <button key={i} onClick={() => handleSeek(i)} style={{ padding:"4px 11px", borderRadius:"20px", fontSize:"10px", fontWeight:"700", cursor:"pointer", border:"none", outline:"none", background:i===idx?`linear-gradient(90deg,${PURPLE},${theme.accent})`:i<idx?theme.accent+"22":"rgba(255,255,255,0.05)", color:i===idx?"#fff":i<idx?theme.accent:"rgba(255,255,255,0.38)", transition:"all 0.2s" }}>
+              {i<idx?"✓ ":i===idx?"▶ ":""}{s.title?.split(' ').slice(0,3).join(' ')||`Scene ${i+1}`}
             </button>
           ))}
         </div>

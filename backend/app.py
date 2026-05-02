@@ -680,50 +680,49 @@ async def canva_video(req: CanvaVideoRequest):
     client = OpenAI(api_key=os.getenv("OPENAI_API_KEY", "").strip())
 
     if not req.lesson_content.strip():
-        return {"error": "No lesson content found. Please open a lesson first, then click Canva.", "topic_slides": []}
+        return {"error": "No lesson content found. Please open a lesson first, then click Canva.", "scenes": []}
 
-    prompt = f"""You are an expert educational video editor.
+    prompt = f"""You are creating a 4-5 minute animated educational video script, like Crash Course Kids or Dr. Binocs Show, for {req.grade} {req.subject} students.
 
-A student is studying: {req.topic} ({req.subject}, {req.grade})
+Topic: {req.topic}
 
-Below is the EXACT lesson content already displayed to the student.
-DO NOT invent new content — convert THIS lesson into a video presentation script.
+USE ONLY THIS LESSON CONTENT — do not invent anything new:
+{req.lesson_content[:4500]}
 
-LESSON CONTENT:
-{req.lesson_content[:5000]}
-
-Break this lesson into clear video slides. Return ONLY valid JSON (no markdown):
+Return ONLY valid JSON (no markdown, no trailing commas):
 {{
-  "video_title": "title based on the lesson topic",
-  "subject": "{req.subject}",
+  "video_title": "Catchy engaging title (not just the topic name)",
   "grade": "{req.grade}",
-  "total_duration": "estimated video duration",
-  "intro_slide": {{
-    "heading": "intro heading from the lesson",
-    "narration": "2-3 sentence opening narration based on the lesson intro",
-    "visual_cue": "what to show on screen"
-  }},
-  "topic_slides": [
+  "subject": "{req.subject}",
+  "total_duration": "4-5 minutes",
+  "scenes": [
     {{
-      "topic": "section name from the lesson",
-      "heading": "slide heading",
-      "key_points": ["direct key point from lesson", "another key point", "third key point"],
-      "narration": "3-4 sentences spoken narration taken directly from this lesson section",
-      "example": "real-world example from the lesson",
-      "visual_cue": "suggested visual for this slide",
-      "duration": "30-60 seconds"
+      "id": 1,
+      "type": "intro",
+      "title": "Scene title",
+      "narration": "Engaging 70-90 word storytelling narration — like an animated show host speaking to kids. Use analogies and relatable comparisons. NO bullet points, NO lists. Natural spoken sentences only.",
+      "visual_theme": "lab",
+      "diagram": {{
+        "type": "none",
+        "title": "",
+        "elements": []
+      }},
+      "key_fact": "One surprising wow-fact from the lesson in under 12 words",
+      "bg_emoji": "🔬"
     }}
-  ],
-  "summary_slide": {{
-    "heading": "Summary",
-    "recap_points": ["key takeaway 1 from lesson", "key takeaway 2", "key takeaway 3"],
-    "narration": "closing narration summarising what was in the lesson",
-    "call_to_action": "what the student should do next"
-  }},
-  "canva_template_search": "best Canva template search term for this topic"
+  ]
 }}
 
-Important: All content MUST come from the lesson text provided above. Create one slide per major section of the lesson."""
+RULES:
+- 6 to 8 scenes: intro + 4-5 concept scenes + summary
+- narration: 70-90 words each, natural storytelling, analogies, excitement — NOT bullet points
+- visual_theme: pick one per scene — "lab" (chemistry/physics), "space" (astronomy), "nature" (biology/environment), "city" (history/social), "classroom" (general)
+- diagram.type: "cycle" (water cycle, cell cycle), "layers" (earth layers, skin layers), "comparison" (solid vs liquid), "flowchart" (step-by-step process), "timeline" (historical events), "bubbles" (related concepts), "none"
+- diagram.elements: 3-5 short labels (max 3 words each) for the diagram nodes/parts
+- diagram.title: short label for the whole diagram (e.g. "Water Cycle", "Earth's Layers")
+- key_fact: memorable fact — students should say "Wow!" when they hear it
+- bg_emoji: single emoji for the scene theme
+- All content from the lesson text above only"""
 
     try:
         response = client.chat.completions.create(
@@ -741,15 +740,10 @@ Important: All content MUST come from the lesson text provided above. Create one
         # Remove trailing commas before } or ] (GPT sometimes adds them)
         raw = re.sub(r',\s*([}\]])', r'\1', raw.strip())
         data = json.loads(raw)
-        canva_app_id = os.getenv("CANVA_APP_ID", "")
-        search = data.get("canva_template_search", "educational video presentation")
-        data["canva_video_url"] = f"https://www.canva.com/create/videos/"
-        data["canva_template_url"] = f"https://www.canva.com/templates/?query={search.replace(' ', '+')}"
-        if canva_app_id:
-            data["canva_app_url"] = f"https://www.canva.com/design/new?app={canva_app_id}"
+        data["canva_video_url"] = "https://www.canva.com/create/videos/"
         return data
     except Exception as e:
-        return {"error": str(e), "topic_slides": []}
+        return {"error": str(e), "scenes": []}
 
 @app.get("/")
 async def root():
