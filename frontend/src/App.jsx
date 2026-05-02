@@ -2610,6 +2610,222 @@ function SceneDiagram({ diagram, themeColor }) {
   );
 }
 
+// ── SVG Cartoon Characters ────────────────────────────────────────────────────
+function CartoonCharacter({ theme, speaking, size = 120 }) {
+  const bob = speaking ? "charBob 0.6s ease infinite" : "none";
+  const blink = "blinkEye 4s ease infinite";
+
+  if (theme === "space") return (
+    <svg viewBox="0 0 100 130" width={size} height={size * 1.3} style={{ animation:bob, overflow:"visible" }}>
+      <ellipse cx="50" cy="110" rx="20" ry="8" fill="rgba(0,0,0,0.3)"/>
+      <rect x="22" y="62" width="56" height="55" rx="14" fill="#b0c4de"/>
+      <rect x="28" y="68" width="44" height="44" rx="10" fill="#7b9cbf"/>
+      <rect x="34" y="74" width="12" height="10" rx="3" fill="#4af"/>
+      <rect x="54" y="74" width="12" height="10" rx="3" fill="#4af"/>
+      <circle cx="50" cy="38" r="26" fill="#cde"/>
+      <circle cx="50" cy="38" r="22" fill="#e8f4fc"/>
+      <ellipse cx="41" cy="35" rx="5" ry="6" fill="white" style={{ animation:blink }}/>
+      <ellipse cx="59" cy="35" rx="5" ry="6" fill="white" style={{ animation:blink }}/>
+      <circle cx="41" cy="36" r="3" fill="#334"/>
+      <circle cx="59" cy="36" r="3" fill="#334"/>
+      <path d={speaking ? "M42,48 Q50,56 58,48" : "M42,48 Q50,52 58,48"} fill="none" stroke="#c05" strokeWidth="2" strokeLinecap="round"/>
+      <rect x="14" y="65" width="10" height="30" rx="5" fill="#8aa"/>
+      <rect x="76" y="65" width="10" height="30" rx="5" fill="#8aa"/>
+      <text x="50" y="100" textAnchor="middle" fill="white" fontSize="8" fontWeight="800" fontFamily="Nunito">NASA</text>
+    </svg>
+  );
+
+  if (theme === "nature") return (
+    <svg viewBox="0 0 100 140" width={size} height={size * 1.4} style={{ animation:bob, overflow:"visible" }}>
+      <ellipse cx="50" cy="118" rx="18" ry="7" fill="rgba(0,0,0,0.2)"/>
+      <rect x="26" y="65" width="48" height="60" rx="10" fill="#7c5c3a"/>
+      <rect x="30" y="70" width="40" height="50" rx="8" fill="#8b6340"/>
+      <ellipse cx="38" cy="88" rx="6" ry="10" fill="#6b4a2a"/>
+      <ellipse cx="62" cy="88" rx="6" ry="10" fill="#6b4a2a"/>
+      <circle cx="50" cy="40" r="24" fill="#fdbcb4"/>
+      <path d="M26,30 Q30,8 50,10 Q70,8 74,30 Q80,24 76,38 Q70,28 50,26 Q30,28 24,38 Q20,24 26,30Z" fill="#5c3a1e"/>
+      <path d="M30,26 Q50,5 70,26" fill="#4a8c2e" stroke="none"/>
+      <path d="M35,30 Q50,14 65,30" fill="#5ab03a" stroke="none"/>
+      <ellipse cx="42" cy="38" rx="4.5" ry="5.5" fill="white" style={{ animation:blink }}/>
+      <ellipse cx="58" cy="38" rx="4.5" ry="5.5" fill="white" style={{ animation:blink }}/>
+      <circle cx="42" cy="39" r="2.5" fill="#3a2"/>
+      <circle cx="58" cy="39" r="2.5" fill="#3a2"/>
+      <path d={speaking ? "M42,50 Q50,58 58,50" : "M42,50 Q50,55 58,50"} fill="none" stroke="#c05" strokeWidth="2.5" strokeLinecap="round"/>
+      <circle cx="50" cy="47" r="2" fill="#ff9a9a"/>
+    </svg>
+  );
+
+  if (theme === "city") return (
+    <svg viewBox="0 0 100 140" width={size} height={size * 1.4} style={{ animation:bob, overflow:"visible" }}>
+      <ellipse cx="50" cy="120" rx="19" ry="7" fill="rgba(0,0,0,0.2)"/>
+      <rect x="25" y="62" width="50" height="62" rx="10" fill="#3b5998"/>
+      <rect x="30" y="68" width="40" height="52" rx="8" fill="#4a6abf"/>
+      <rect x="28" y="62" width="44" height="12" rx="4" fill="#2a4a88"/>
+      <text x="50" y="72" textAnchor="middle" fill="white" fontSize="7" fontWeight="900" fontFamily="Nunito">HISTORY</text>
+      <circle cx="50" cy="38" r="24" fill="#fdbcb4"/>
+      <path d="M26,28 Q50,6 74,28 Q78,18 74,32 Q64,22 50,24 Q36,22 26,32 Q22,18 26,28Z" fill="#3d1f00"/>
+      <ellipse cx="41" cy="36" rx="5" ry="6" fill="white" style={{ animation:blink }}/>
+      <ellipse cx="59" cy="36" rx="5" ry="6" fill="white" style={{ animation:blink }}/>
+      <circle cx="41" cy="37" r="2.8" fill="#5c3a"/>
+      <circle cx="59" cy="37" r="2.8" fill="#5c3a"/>
+      <circle cx="40" cy="35" rx="6" ry="6" fill="none" stroke="#333" strokeWidth="1.2"/>
+      <circle cx="60" cy="35" r="6" fill="none" stroke="#333" strokeWidth="1.2"/>
+      <line x1="46" y1="35" x2="54" y2="35" stroke="#333" strokeWidth="1.2"/>
+      <path d={speaking ? "M42,50 Q50,58 58,50" : "M42,50 Q50,54 58,50"} fill="none" stroke="#c05" strokeWidth="2" strokeLinecap="round"/>
+    </svg>
+  );
+
+  if (theme === "lab") return (
+    <svg viewBox="0 0 100 140" width={size} height={size * 1.4} style={{ animation:bob, overflow:"visible" }}>
+      <ellipse cx="50" cy="122" rx="19" ry="7" fill="rgba(0,0,0,0.2)"/>
+      <rect x="24" y="62" width="52" height="64" rx="10" fill="white"/>
+      <rect x="28" y="66" width="44" height="56" rx="8" fill="#f0f4f8"/>
+      <rect x="24" y="62" width="52" height="12" rx="6" fill="#4ade80"/>
+      <rect x="36" y="86" width="6" height="16" rx="3" fill="#4ade80" opacity="0.6"/>
+      <rect x="48" y="80" width="6" height="22" rx="3" fill="#60a5fa" opacity="0.6"/>
+      <rect x="60" y="90" width="6" height="12" rx="3" fill="#f87171" opacity="0.6"/>
+      <circle cx="50" cy="36" r="24" fill="#fdbcb4"/>
+      <path d="M26,22 Q50,2 74,22 Q80,16 76,30 Q65,20 50,22 Q35,20 24,30 Q20,16 26,22Z" fill="#2c1810"/>
+      <ellipse cx="41" cy="34" rx="5" ry="6" fill="white" style={{ animation:blink }}/>
+      <ellipse cx="59" cy="34" rx="5" ry="6" fill="white" style={{ animation:blink }}/>
+      <circle cx="41" cy="35" r="3" fill="#1a5"/>
+      <circle cx="59" cy="35" r="3" fill="#1a5"/>
+      <circle cx="40" cy="33" r="6" fill="none" stroke="#555" strokeWidth="1.5"/>
+      <circle cx="60" cy="33" r="6" fill="none" stroke="#555" strokeWidth="1.5"/>
+      <line x1="46" y1="33" x2="54" y2="33" stroke="#555" strokeWidth="1.5"/>
+      <path d={speaking ? "M42,46 Q50,54 58,46" : "M42,46 Q50,50 58,46"} fill="none" stroke="#c05" strokeWidth="2.5" strokeLinecap="round"/>
+      <path d="M24,62 L20,95 Q18,102 24,104 L28,66Z" fill="white"/>
+      <path d="M76,62 L80,95 Q82,102 76,104 L72,66Z" fill="white"/>
+    </svg>
+  );
+
+  // classroom (default)
+  return (
+    <svg viewBox="0 0 100 140" width={size} height={size * 1.4} style={{ animation:bob, overflow:"visible" }}>
+      <ellipse cx="50" cy="122" rx="19" ry="7" fill="rgba(0,0,0,0.2)"/>
+      <rect x="26" y="64" width="48" height="60" rx="10" fill="#7B2FBE"/>
+      <rect x="30" y="68" width="40" height="52" rx="8" fill="#9040d0"/>
+      <rect x="36" y="76" width="12" height="16" rx="4" fill="white" opacity="0.3"/>
+      <circle cx="50" cy="38" r="24" fill="#fdbcb4"/>
+      <path d="M27,24 Q50,4 73,24 Q79,16 75,30 Q65,20 50,22 Q35,20 25,30 Q21,16 27,24Z" fill="#1a0a00"/>
+      <ellipse cx="42" cy="36" rx="5" ry="6" fill="white" style={{ animation:blink }}/>
+      <ellipse cx="58" cy="36" rx="5" ry="6" fill="white" style={{ animation:blink }}/>
+      <circle cx="42" cy="37" r="3" fill="#7B2FBE"/>
+      <circle cx="58" cy="37" r="3" fill="#7B2FBE"/>
+      <path d={speaking ? "M42,49 Q50,57 58,49" : "M42,49 Q50,53 58,49"} fill="none" stroke="#c05" strokeWidth="2.5" strokeLinecap="round"/>
+      <circle cx="50" cy="46" r="2" fill="#ff9a9a"/>
+      <rect x="44" y="114" width="6" height="10" rx="3" fill="#5a1e9a"/>
+      <rect x="50" y="114" width="6" height="10" rx="3" fill="#5a1e9a"/>
+    </svg>
+  );
+}
+
+// ── Cartoon Background Scene ───────────────────────────────────────────────────
+function CartoonBackground({ theme }) {
+  if (theme === "space") return (
+    <svg viewBox="0 0 900 360" width="100%" height="100%" style={{ position:"absolute", inset:0 }} preserveAspectRatio="xMidYMid slice">
+      <rect width="900" height="360" fill="#04091f"/>
+      {[[80,60],[200,30],[350,80],[500,20],[650,55],[780,35],[120,150],[420,130],[700,140]].map(([x,y],i) => (
+        <circle key={i} cx={x} cy={y} r={1+i%3} fill="white" opacity={0.4+i%5*0.1}>
+          <animate attributeName="opacity" values={`${0.3+i%4*0.15};1;${0.3+i%4*0.15}`} dur={`${2+i*0.4}s`} repeatCount="indefinite"/>
+        </circle>
+      ))}
+      <ellipse cx="750" cy="80" rx="55" ry="55" fill="#1a1060" stroke="#4040a0" strokeWidth="3"/>
+      <ellipse cx="750" cy="80" rx="42" ry="42" fill="#2a1880"/>
+      <ellipse cx="730" cy="65" rx="10" ry="8" fill="#3a2890" opacity="0.6"/>
+      <ellipse cx="650" cy="50" rx="18" ry="18" fill="none" stroke="#ff6600" strokeWidth="3" opacity="0.6"/>
+      <ellipse cx="650" cy="50" rx="30" ry="8" fill="none" stroke="#ff8800" strokeWidth="2" opacity="0.5"/>
+    </svg>
+  );
+
+  if (theme === "lab") return (
+    <svg viewBox="0 0 900 360" width="100%" height="100%" style={{ position:"absolute", inset:0 }} preserveAspectRatio="xMidYMid slice">
+      <rect width="900" height="360" fill="#061a10"/>
+      <rect x="0" y="240" width="900" height="120" fill="#041208"/>
+      <rect x="600" y="180" width="260" height="180" rx="8" fill="#062010" stroke="#0f4020" strokeWidth="2"/>
+      {[[620,220,"#4ade80"],[660,200,"#60a5fa"],[700,230,"#f87171"],[740,210,"#fbbf24"]].map(([x,y,c],i) => (
+        <g key={i}>
+          <rect x={x-5} y={y} width="10" height={260-y} fill={c} opacity="0.15"/>
+          <ellipse cx={x} cy={y} rx="8" ry="12" fill={c} opacity="0.7"/>
+          <ellipse cx={x} cy={y-4} rx="5" ry="5" fill={c}/>
+        </g>
+      ))}
+      {[100,200,350,450,520].map((x,i) => (
+        <g key={i}>
+          <rect x={x} y={280} width="30" height={80} fill="#062018" stroke="#0a3020" strokeWidth="1"/>
+          <rect x={x} y={240+i*8} width="30" height={40-i*8} rx="4" fill={["#4ade80","#60a5fa","#f87171","#fbbf24","#a78bfa"][i]} opacity="0.4"/>
+        </g>
+      ))}
+      <line x1="0" y1="180" x2="900" y2="180" stroke="#0a3020" strokeWidth="2"/>
+    </svg>
+  );
+
+  if (theme === "nature") return (
+    <svg viewBox="0 0 900 360" width="100%" height="100%" style={{ position:"absolute", inset:0 }} preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#1a3a1a"/>
+          <stop offset="100%" stopColor="#2a5a2a"/>
+        </linearGradient>
+      </defs>
+      <rect width="900" height="360" fill="url(#sky)"/>
+      <ellipse cx="150" cy="80" rx="60" ry="30" fill="#1e4a1e" opacity="0.5">
+        <animateTransform attributeName="transform" type="translate" values="0,0;8,0;0,0" dur="8s" repeatCount="indefinite"/>
+      </ellipse>
+      <ellipse cx="700" cy="60" rx="80" ry="35" fill="#1e4a1e" opacity="0.4">
+        <animateTransform attributeName="transform" type="translate" values="0,0;-6,0;0,0" dur="10s" repeatCount="indefinite"/>
+      </ellipse>
+      {[[80,360],[200,360],[550,360],[720,360],[860,360]].map(([x,h],i) => (
+        <g key={i}>
+          <rect x={x-8} y={260} width="16" height={h-260} fill="#1a4a10"/>
+          <ellipse cx={x} cy={240} rx={28+i*4} ry={40+i*4} fill={["#1a5a10","#2a6a20","#1e5518","#246020","#1c5014"][i]}/>
+          <ellipse cx={x-10} cy={220} rx={22} ry={30} fill={["#2a6a20","#1a5a10","#2a6a20","#1e5518","#246020"][i]} opacity="0.8"/>
+        </g>
+      ))}
+      <rect x="0" y="300" width="900" height="60" fill="#1a5010"/>
+      {[120,280,450,600,780].map((x,i) => (
+        <g key={i}>
+          <ellipse cx={x} cy="300" rx="12" ry="6" fill="#2a6a20"/>
+          <ellipse cx={x+8} cy="295" rx="10" ry="5" fill="#3a7a30"/>
+        </g>
+      ))}
+    </svg>
+  );
+
+  if (theme === "city") return (
+    <svg viewBox="0 0 900 360" width="100%" height="100%" style={{ position:"absolute", inset:0 }} preserveAspectRatio="xMidYMid slice">
+      <rect width="900" height="360" fill="#0a0a1e"/>
+      {[[50,120,80,240],[160,80,60,280],[260,140,70,220],[380,60,50,300],[460,100,80,260],[580,140,60,220],[680,70,50,290],[780,110,70,250],[860,90,40,270]].map(([x,h,w,y],i) => (
+        <g key={i}>
+          <rect x={x} y={360-y-h} width={w} height={y+h} fill={`hsl(${220+i*10},40%,${8+i%3*4}%)`} stroke={`hsl(${220+i*10},40%,20%)`} strokeWidth="1"/>
+          {Array.from({length:Math.floor(h/20)}).map((_,r) =>
+            Array.from({length:Math.floor(w/18)}).map((_,c) => (
+              <rect key={`${r}-${c}`} x={x+4+c*16} y={360-y-h+6+r*18} width="10" height="10" fill={Math.random()>0.4?"#ffd70044":"transparent"} rx="1"/>
+            ))
+          )}
+        </g>
+      ))}
+      <rect x="0" y="320" width="900" height="40" fill="#050510"/>
+      <line x1="0" y1="322" x2="900" y2="322" stroke="#ffd700" strokeWidth="1" opacity="0.3" strokeDasharray="40 20"/>
+    </svg>
+  );
+
+  // classroom default
+  return (
+    <svg viewBox="0 0 900 360" width="100%" height="100%" style={{ position:"absolute", inset:0 }} preserveAspectRatio="xMidYMid slice">
+      <rect width="900" height="360" fill="#0a0618"/>
+      <rect x="40" y="40" width="500" height="260" rx="6" fill="#0f1a2e" stroke="#1e3a5a" strokeWidth="3"/>
+      <rect x="46" y="46" width="488" height="248" rx="4" fill="#0a1428"/>
+      <text x="290" y="100" textAnchor="middle" fill="#1e3a5a" fontSize="20" fontWeight="900" fontFamily="Nunito" opacity="0.5">LESSON</text>
+      {["→  Key concept one goes here...","→  Another important idea...","→  Third point to remember..."].map((t,i) => (
+        <text key={i} x="70" y={130+i*40} fill="#1e4a6a" fontSize="14" fontFamily="Nunito" opacity="0.6">{t}</text>
+      ))}
+      <rect x="560" y="40" width="300" height="140" rx="6" fill="#0f1a2e" stroke="#1e3a5a" strokeWidth="2"/>
+      <rect x="560" y="200" width="300" height="100" rx="6" fill="#0f1a2e" stroke="#1e3a5a" strokeWidth="2"/>
+    </svg>
+  );
+}
+
 // ── Animated Video Lesson ─────────────────────────────────────────────────────
 function CanvaLessonView({ slides, loading, error, topic, onRetry }) {
   const TEAL   = "#00C4CC";
@@ -2696,149 +2912,184 @@ function CanvaLessonView({ slides, loading, error, topic, onRetry }) {
   if (!slides || total === 0) return null;
 
   const pct = ((idx + (speaking ? 0.5 : 0)) / Math.max(total, 1)) * 100;
-  const floats = theme.floats || ["⭐"];
-  // search term for Canva animated template
-  const canvaSearch = encodeURIComponent(`animated educational video ${slides.subject || ""} kids`);
+  const canvaSearch = encodeURIComponent(`animated cartoon educational video ${slides.subject || "kids"}`);
   const canvaUrl = `https://www.canva.com/templates/?query=${canvaSearch}&doctype=video`;
+  // Build a copyable script for Canva
+  const fullScript = scenes.map((s,i) =>
+    `SCENE ${i+1}: ${s.title}\n${s.narration}${s.key_fact?`\nFACT: ${s.key_fact}`:""}`
+  ).join("\n\n---\n\n");
 
   return (
-    <div style={{ padding:"12px", maxWidth:"900px", margin:"0 auto" }}>
+    <div style={{ padding:"12px", maxWidth:"920px", margin:"0 auto" }}>
       <style>{`
-        @keyframes charBob{0%,100%{transform:translateY(0) rotate(-2deg)}50%{transform:translateY(-14px) rotate(2deg)}}
-        @keyframes sBar{0%,100%{transform:scaleY(0.25)}50%{transform:scaleY(1)}}
-        @keyframes sceneIn{from{opacity:0;transform:scale(0.96)}to{opacity:1;transform:scale(1)}}
-        @keyframes factPop{0%{transform:scale(0.7) rotate(-3deg);opacity:0}70%{transform:scale(1.08) rotate(1deg)}100%{transform:scale(1) rotate(0deg);opacity:1}}
-        @keyframes floatA{0%,100%{transform:translate(0,0) rotate(0deg)}33%{transform:translate(12px,-18px) rotate(15deg)}66%{transform:translate(-8px,-10px) rotate(-10deg)}}
-        @keyframes floatB{0%,100%{transform:translate(0,0) rotate(0deg)}50%{transform:translate(-14px,-22px) rotate(-20deg)}}
-        @keyframes floatC{0%,100%{transform:translate(0,0)}40%{transform:translate(16px,-12px)}80%{transform:translate(-6px,-20px)}}
-        @keyframes diagIn{from{opacity:0;transform:translateY(20px) scale(0.9)}to{opacity:1;transform:translateY(0) scale(1)}}
-        @keyframes subtitleIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
-        @keyframes titleIn{from{opacity:0;transform:translateX(-20px)}to{opacity:1;transform:translateX(0)}}
-        @keyframes glowPulse{0%,100%{box-shadow:0 0 0 0 transparent}50%{box-shadow:0 0 30px 6px rgba(123,47,190,0.3)}}
+        @keyframes charBob{0%,100%{transform:translateY(0) rotate(-2deg) scale(1)}40%{transform:translateY(-16px) rotate(3deg) scale(1.06)}80%{transform:translateY(-8px) rotate(-1deg) scale(1.03)}}
+        @keyframes blinkEye{0%,90%,100%{transform:scaleY(1)}95%{transform:scaleY(0.08)}}
+        @keyframes sBar{0%,100%{transform:scaleY(0.2)}50%{transform:scaleY(1)}}
+        @keyframes sceneIn{from{opacity:0}to{opacity:1}}
+        @keyframes factPop{0%{transform:scale(0.6) rotate(-4deg);opacity:0}60%{transform:scale(1.1) rotate(1deg)}100%{transform:scale(1) rotate(0);opacity:1}}
+        @keyframes diagIn{from{opacity:0;transform:translateY(24px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes titleSlide{from{opacity:0;transform:translateX(-24px)}to{opacity:1;transform:translateX(0)}}
+        @keyframes filmGlow{0%,100%{box-shadow:0 0 40px 0 rgba(123,47,190,0.2)}50%{box-shadow:0 0 60px 8px rgba(123,47,190,0.45)}}
+        @keyframes scrollSub{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+        @keyframes subtitleBar{0%{width:0%}100%{width:100%}}
       `}</style>
 
-      {/* ── Cartoon video player ── */}
-      <div style={{ borderRadius:"22px", overflow:"hidden", boxShadow:"0 20px 70px rgba(0,0,0,0.85)", border:`1px solid ${theme.accent}30`, animation:"glowPulse 4s ease infinite" }}>
+      {/* ── FILM CONTAINER ── */}
+      <div style={{ borderRadius:"20px", overflow:"hidden", boxShadow:"0 24px 80px rgba(0,0,0,0.9)", animation:"filmGlow 5s ease infinite", border:"2px solid rgba(123,47,190,0.3)" }}>
 
-        {/* ── Show title bar ── */}
-        <div style={{ background:`linear-gradient(90deg,${PURPLE},${theme.accent}cc)`, padding:"10px 20px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
-          <div style={{ display:"flex", alignItems:"center", gap:"10px" }}>
-            <span style={{ fontSize:"22px" }}>{theme.char}</span>
-            <div>
-              <div style={{ color:"#fff", fontWeight:"900", fontSize:"14px", letterSpacing:"0.3px" }}>{slides.video_title}</div>
-              <div style={{ color:"rgba(255,255,255,0.65)", fontSize:"10px" }}>{slides.grade} · {slides.subject} · {slides.total_duration}</div>
-            </div>
-          </div>
-          <div style={{ background:"rgba(0,0,0,0.3)", borderRadius:"20px", padding:"3px 10px", fontSize:"11px", color:"#fff", fontWeight:"700" }}>
-            {idx+1} / {total}
+        {/* Film strip top */}
+        <div style={{ background:"#111", height:"20px", display:"flex", alignItems:"center", gap:"6px", padding:"0 14px", borderBottom:"1px solid #222" }}>
+          {Array.from({length:20}).map((_,i) => <div key={i} style={{ width:"18px", height:"12px", background:"#222", borderRadius:"2px", flexShrink:0 }}/>)}
+        </div>
+
+        {/* Title bar */}
+        <div style={{ background:`linear-gradient(90deg,#0a0010,${PURPLE},${theme.accent}aa,#0a0010)`, padding:"9px 20px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <div style={{ color:"#fff", fontWeight:"900", fontSize:"15px", letterSpacing:"1px", textShadow:`0 0 20px ${theme.accent}` }}>{slides.video_title}</div>
+          <div style={{ display:"flex", gap:"8px", alignItems:"center" }}>
+            <div style={{ background:"rgba(0,0,0,0.5)", borderRadius:"20px", padding:"2px 10px", fontSize:"10px", color:"rgba(255,255,255,0.7)", fontWeight:"700" }}>{slides.grade} · {slides.subject}</div>
+            <div style={{ background:PURPLE, borderRadius:"20px", padding:"2px 10px", fontSize:"10px", color:"#fff", fontWeight:"800" }}>{idx+1}/{total}</div>
           </div>
         </div>
 
         {/* Progress bar */}
-        <div style={{ height:"4px", background:"rgba(0,0,0,0.4)" }}>
-          <div style={{ height:"100%", width:`${pct}%`, background:`linear-gradient(90deg,${PURPLE},${theme.accent})`, transition:"width 1.2s ease", borderRadius:"0 2px 2px 0" }}/>
+        <div style={{ height:"3px", background:"rgba(255,255,255,0.07)" }}>
+          <div style={{ height:"100%", width:`${pct}%`, background:`linear-gradient(90deg,${PURPLE},${theme.accent})`, transition:"width 1.2s ease" }}/>
         </div>
 
-        {/* ── MAIN SCENE — full cartoon layout ── */}
-        <div key={idx} style={{ background:theme.bg, minHeight:"360px", position:"relative", overflow:"hidden", animation:"sceneIn 0.55s ease both" }}>
+        {/* ── MAIN CARTOON SCENE ── */}
+        <div key={idx} style={{ position:"relative", minHeight:"380px", overflow:"hidden", animation:"sceneIn 0.4s ease both" }}>
 
-          {/* ── Floating animated background objects ── */}
-          {floats.map((em, i) => (
-            <div key={i} style={{
-              position:"absolute", fontSize:`${18 + (i%3)*10}px`, opacity:0.1 + (i%3)*0.04, userSelect:"none", pointerEvents:"none",
-              top:`${[8,18,60,75,30,50][i%6]}%`, left:`${[5,80,15,70,45,90][i%6]}%`,
-              animation:`${["floatA","floatB","floatC","floatA","floatB","floatC"][i%6]} ${5+i*1.3}s ease-in-out infinite ${i*0.6}s`
-            }}>{em}</div>
-          ))}
+          {/* Animated cartoon background */}
+          <CartoonBackground theme={scene.visual_theme || "classroom"} />
 
-          {/* ── Scene layout: left character + right content ── */}
-          <div style={{ display:"flex", minHeight:"310px", position:"relative", zIndex:1 }}>
+          {/* Scene overlay: character + content */}
+          <div style={{ position:"relative", zIndex:2, display:"flex", minHeight:"340px" }}>
 
-            {/* Character panel */}
-            <div style={{ width:"130px", flexShrink:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"flex-end", padding:"16px 8px 20px", gap:"6px" }}>
-              {/* Big animated character */}
-              <div style={{ fontSize:"70px", lineHeight:1, animation:speaking?"charBob 0.65s ease infinite":"none", filter:speaking?`drop-shadow(0 0 12px ${theme.accent}88)`:"none", transition:"filter 0.3s", userSelect:"none" }}>
-                {scene.bg_emoji || theme.char}
+            {/* ── Cartoon character side ── */}
+            <div style={{ width:"160px", flexShrink:0, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"flex-end", padding:"10px 8px 12px", gap:"4px" }}>
+              {/* Character with drop shadow glow */}
+              <div style={{ filter:speaking?`drop-shadow(0 0 16px ${theme.accent}) drop-shadow(0 4px 8px rgba(0,0,0,0.8))`:"drop-shadow(0 4px 8px rgba(0,0,0,0.7))", transition:"filter 0.4s" }}>
+                <CartoonCharacter theme={scene.visual_theme || "classroom"} speaking={speaking} size={110}/>
               </div>
-              {/* Sound bars */}
-              <div style={{ display:"flex", gap:"3px", alignItems:"flex-end", height:"22px" }}>
-                {[6,12,18,12,6].map((h,i) => (
-                  <div key={i} style={{ width:"4px", borderRadius:"2px", background:speaking?theme.accent:"rgba(255,255,255,0.1)", height:speaking?`${h}px`:"3px", animation:speaking?`sBar 0.45s ease infinite ${i*0.08}s`:"none", transition:"height 0.3s,background 0.3s", transformOrigin:"bottom" }}/>
+              {/* Sound wave bars */}
+              <div style={{ display:"flex", gap:"3px", alignItems:"flex-end", height:"18px", marginTop:"2px" }}>
+                {[5,10,16,10,5].map((h,i) => (
+                  <div key={i} style={{ width:"4px", borderRadius:"2px", background:speaking?theme.accent:"rgba(255,255,255,0.08)", height:speaking?`${h}px`:"2px", animation:speaking?`sBar 0.4s ease infinite ${i*0.08}s`:"none", transition:"height 0.3s,background 0.3s", transformOrigin:"bottom" }}/>
                 ))}
               </div>
-              {/* Status pill */}
-              <div style={{ background:speaking?theme.accent+"33":"rgba(255,255,255,0.06)", border:`1px solid ${speaking?theme.accent:"rgba(255,255,255,0.1)"}`, borderRadius:"20px", padding:"2px 8px", fontSize:"9px", fontWeight:"800", color:speaking?theme.accent:"rgba(255,255,255,0.3)", letterSpacing:"0.5px", transition:"all 0.3s" }}>
-                {speaking?"● ON AIR":paused?"⏸ PAUSE":"▶ READY"}
+              {/* ON AIR badge */}
+              <div style={{ background:speaking?"#e00":"rgba(0,0,0,0.5)", border:`1px solid ${speaking?"#f00":"rgba(255,255,255,0.1)"}`, borderRadius:"20px", padding:"2px 8px", fontSize:"8px", fontWeight:"900", color:"#fff", letterSpacing:"1px", transition:"background 0.3s", marginTop:"2px" }}>
+                {speaking?"● ON AIR":paused?"⏸ PAUSED":"▶ PRESS PLAY"}
               </div>
             </div>
 
-            {/* Main content area */}
+            {/* ── Scene content ── */}
             <div style={{ flex:1, padding:"18px 20px 14px", display:"flex", flexDirection:"column", gap:"10px" }}>
 
-              {/* Scene badge + Title */}
-              <div style={{ animation:"titleIn 0.4s ease both" }}>
-                <span style={{ background:theme.accent+"28", color:theme.accent, borderRadius:"6px", padding:"2px 8px", fontSize:"9px", fontWeight:"900", letterSpacing:"1.5px", textTransform:"uppercase" }}>
-                  {scene.type==="intro"?"🎬 INTRO":scene.type==="summary"?"✅ WRAP UP":"📽 SCENE"}
-                </span>
-                <div style={{ color:"#fff", fontSize:"21px", fontWeight:"900", lineHeight:"1.2", marginTop:"5px", textShadow:`0 2px 12px ${theme.accent}44` }}>
+              {/* Scene title card */}
+              <div style={{ animation:"titleSlide 0.4s ease both" }}>
+                <div style={{ display:"inline-flex", alignItems:"center", gap:"6px", background:"rgba(0,0,0,0.6)", backdropFilter:"blur(6px)", borderRadius:"8px", padding:"3px 10px", marginBottom:"6px" }}>
+                  <span style={{ fontSize:"10px" }}>{scene.type==="intro"?"🎬":scene.type==="summary"?"🏆":"📽"}</span>
+                  <span style={{ color:theme.accent, fontSize:"9px", fontWeight:"900", letterSpacing:"1.5px", textTransform:"uppercase" }}>
+                    {scene.type==="intro"?"INTRO":scene.type==="summary"?"FINALE":`SCENE ${idx+1}`}
+                  </span>
+                </div>
+                <div style={{ color:"#fff", fontSize:"22px", fontWeight:"900", lineHeight:"1.2", textShadow:"0 2px 16px rgba(0,0,0,0.8)", letterSpacing:"0.3px" }}>
                   {scene.title}
                 </div>
               </div>
 
-              {/* Diagram — hero of the scene */}
+              {/* Diagram hero */}
               {scene.diagram?.type && scene.diagram.type !== "none" && scene.diagram.elements?.length > 0 ? (
-                <div style={{ display:"flex", flexDirection:"column", alignItems:"center", background:"rgba(255,255,255,0.04)", borderRadius:"14px", padding:"12px 8px", border:`1px solid ${theme.accent}22`, animation:"diagIn 0.6s ease 0.15s both" }}>
-                  {scene.diagram.title && <div style={{ color:theme.accent, fontSize:"10px", fontWeight:"900", textTransform:"uppercase", letterSpacing:"1.5px", marginBottom:"8px" }}>{scene.diagram.title}</div>}
-                  <SceneDiagram diagram={scene.diagram} themeColor={theme.accent} />
+                <div style={{ background:"rgba(0,0,0,0.55)", backdropFilter:"blur(8px)", borderRadius:"16px", padding:"12px 10px", border:`1px solid ${theme.accent}33`, animation:"diagIn 0.5s ease 0.15s both" }}>
+                  {scene.diagram.title && <div style={{ color:theme.accent, fontSize:"10px", fontWeight:"900", textTransform:"uppercase", letterSpacing:"1.5px", marginBottom:"8px", textAlign:"center" }}>{scene.diagram.title}</div>}
+                  <SceneDiagram diagram={scene.diagram} themeColor={theme.accent}/>
                 </div>
               ) : (
-                /* No diagram — show a big themed visual */
-                <div style={{ display:"flex", justifyContent:"center", alignItems:"center", fontSize:"80px", opacity:0.35, minHeight:"80px", animation:"diagIn 0.6s ease 0.1s both" }}>
-                  {theme.char}
+                <div style={{ flex:1, display:"flex", alignItems:"center", justifyContent:"center", fontSize:"72px", opacity:0.2, animation:"diagIn 0.5s ease 0.1s both", userSelect:"none" }}>
+                  {scene.bg_emoji || theme.char}
                 </div>
               )}
 
-              {/* Key fact — like a cartoon caption box */}
+              {/* WOW fact bubble */}
               {scene.key_fact && (
-                <div style={{ background:`linear-gradient(135deg,${theme.accent}22,${PURPLE}22)`, border:`2px solid ${theme.accent}55`, borderRadius:"12px", padding:"8px 14px", fontSize:"13px", color:"#fff", fontWeight:"800", animation:"factPop 0.5s ease 0.35s both", textAlign:"center" }}>
-                  <span style={{ color:theme.accent }}>⚡ WOW FACT: </span>{scene.key_fact}
+                <div style={{ background:`linear-gradient(135deg,rgba(0,0,0,0.7),rgba(123,47,190,0.4))`, border:`2px solid ${theme.accent}66`, borderRadius:"14px", padding:"9px 14px", animation:"factPop 0.55s ease 0.3s both", backdropFilter:"blur(6px)" }}>
+                  <span style={{ color:theme.accent, fontWeight:"900", fontSize:"11px" }}>⚡ WOW: </span>
+                  <span style={{ color:"#fff", fontWeight:"700", fontSize:"12px" }}>{scene.key_fact}</span>
                 </div>
               )}
             </div>
           </div>
 
-          {/* ── Subtitle / narration bar ── */}
-          <div style={{ background:"rgba(0,0,0,0.7)", backdropFilter:"blur(8px)", padding:"10px 20px", display:"flex", gap:"10px", alignItems:"center", borderTop:`1px solid ${theme.accent}22`, minHeight:"48px" }}>
-            <span style={{ fontSize:"16px", flexShrink:0 }}>{speaking?"🔊":"🎙"}</span>
-            <div key={speaking?scene.narration:"idle"} style={{ fontSize:"13px", color:speaking?"#fff":"rgba(255,255,255,0.32)", fontStyle:speaking?"normal":"italic", lineHeight:"1.55", flex:1, animation:speaking?"subtitleIn 0.3s ease both":"none", transition:"color 0.4s" }}>
-              {speaking ? scene.narration : paused ? "⏸  Paused — press ▶ to continue" : "▶  Press Play to watch your animated lesson with teacher voice"}
+          {/* ── Movie-style subtitle bar ── */}
+          <div style={{ position:"relative", background:"rgba(0,0,0,0.82)", backdropFilter:"blur(10px)", padding:"10px 24px", display:"flex", gap:"12px", alignItems:"center", borderTop:`1px solid ${theme.accent}22`, minHeight:"52px" }}>
+            {speaking && <div style={{ position:"absolute", top:0, left:0, height:"2px", background:theme.accent, animation:"subtitleBar 3s linear" }}/>}
+            <span style={{ fontSize:"16px", flexShrink:0, opacity:speaking?1:0.4 }}>🎬</span>
+            <div key={speaking ? scene.narration : "idle"} style={{ fontSize:"13px", color:speaking?"#fff":"rgba(255,255,255,0.3)", lineHeight:"1.6", flex:1, fontStyle:speaking?"normal":"italic", animation:speaking?"scrollSub 0.35s ease both":"none", transition:"color 0.4s", letterSpacing:"0.2px" }}>
+              {speaking ? scene.narration : paused ? "⏸  Paused — press ▶ to continue" : "▶  Press Play to start your cartoon lesson video"}
             </div>
           </div>
+        </div>
+
+        {/* Film strip bottom */}
+        <div style={{ background:"#111", height:"20px", display:"flex", alignItems:"center", gap:"6px", padding:"0 14px", borderTop:"1px solid #222" }}>
+          {Array.from({length:20}).map((_,i) => <div key={i} style={{ width:"18px", height:"12px", background:"#222", borderRadius:"2px", flexShrink:0 }}/>)}
         </div>
 
         {/* ── Controls ── */}
-        <div style={{ background:"#08080f", padding:"14px 20px", display:"flex", justifyContent:"center", alignItems:"center", gap:"14px" }}>
-          <button onClick={handlePrev} disabled={idx===0} style={{ width:"42px", height:"42px", borderRadius:"50%", border:`1.5px solid rgba(255,255,255,${idx===0?".08":".18"})`, background:"transparent", color:idx===0?"rgba(255,255,255,0.12)":"#fff", fontSize:"17px", cursor:idx===0?"not-allowed":"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>⏮</button>
-          <button onClick={handleStop} style={{ width:"42px", height:"42px", borderRadius:"50%", border:"1.5px solid rgba(255,255,255,0.18)", background:"transparent", color:"#fff", fontSize:"14px", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>⏹</button>
+        <div style={{ background:"#080810", padding:"14px 20px", display:"flex", justifyContent:"center", alignItems:"center", gap:"14px" }}>
+          <button onClick={handlePrev} disabled={idx===0} style={{ width:"42px", height:"42px", borderRadius:"50%", border:`1.5px solid rgba(255,255,255,${idx===0?".06":".15"})`, background:"transparent", color:idx===0?"rgba(255,255,255,0.1)":"#fff", fontSize:"17px", cursor:idx===0?"not-allowed":"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>⏮</button>
+          <button onClick={handleStop} style={{ width:"42px", height:"42px", borderRadius:"50%", border:"1.5px solid rgba(255,255,255,0.15)", background:"transparent", color:"#fff", fontSize:"14px", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>⏹</button>
           {(!playing||paused)
-            ? <button onClick={handlePlay} style={{ width:"68px", height:"68px", borderRadius:"50%", border:"none", background:`linear-gradient(135deg,${PURPLE},${theme.accent})`, color:"#fff", fontSize:"30px", cursor:"pointer", boxShadow:`0 6px 28px ${PURPLE}aa`, display:"flex", alignItems:"center", justifyContent:"center" }}>▶</button>
-            : <button onClick={handlePause} style={{ width:"68px", height:"68px", borderRadius:"50%", border:"none", background:`linear-gradient(135deg,${PURPLE},${theme.accent})`, color:"#fff", fontSize:"26px", cursor:"pointer", boxShadow:`0 6px 28px ${PURPLE}aa`, display:"flex", alignItems:"center", justifyContent:"center" }}>⏸</button>
+            ? <button onClick={handlePlay} style={{ width:"70px", height:"70px", borderRadius:"50%", border:"none", background:`linear-gradient(135deg,${PURPLE},${theme.accent})`, color:"#fff", fontSize:"32px", cursor:"pointer", boxShadow:`0 8px 32px ${PURPLE}bb`, display:"flex", alignItems:"center", justifyContent:"center" }}>▶</button>
+            : <button onClick={handlePause} style={{ width:"70px", height:"70px", borderRadius:"50%", border:"none", background:`linear-gradient(135deg,${PURPLE},${theme.accent})`, color:"#fff", fontSize:"26px", cursor:"pointer", boxShadow:`0 8px 32px ${PURPLE}bb`, display:"flex", alignItems:"center", justifyContent:"center" }}>⏸</button>
           }
-          <button onClick={handleNext} disabled={idx===total-1} style={{ width:"42px", height:"42px", borderRadius:"50%", border:`1.5px solid rgba(255,255,255,${idx===total-1?".08":".18"})`, background:"transparent", color:idx===total-1?"rgba(255,255,255,0.12)":"#fff", fontSize:"17px", cursor:idx===total-1?"not-allowed":"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>⏭</button>
+          <button onClick={handleNext} disabled={idx===total-1} style={{ width:"42px", height:"42px", borderRadius:"50%", border:`1.5px solid rgba(255,255,255,${idx===total-1?".06":".15"})`, background:"transparent", color:idx===total-1?"rgba(255,255,255,0.1)":"#fff", fontSize:"17px", cursor:idx===total-1?"not-allowed":"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>⏭</button>
         </div>
 
-        {/* ── Scene chips ── */}
-        <div style={{ background:"#050508", padding:"10px 14px 14px", display:"flex", gap:"6px", flexWrap:"wrap", justifyContent:"center" }}>
+        {/* Scene navigation */}
+        <div style={{ background:"#050508", padding:"8px 14px 12px", display:"flex", gap:"5px", flexWrap:"wrap", justifyContent:"center" }}>
           {scenes.map((s,i) => (
-            <button key={i} onClick={() => handleSeek(i)} style={{ padding:"4px 12px", borderRadius:"20px", fontSize:"10px", fontWeight:"700", cursor:"pointer", border:"none", outline:"none", background:i===idx?`linear-gradient(90deg,${PURPLE},${theme.accent})`:i<idx?theme.accent+"20":"rgba(255,255,255,0.05)", color:i===idx?"#fff":i<idx?theme.accent:"rgba(255,255,255,0.3)", transition:"all 0.2s" }}>
+            <button key={i} onClick={() => handleSeek(i)} style={{ padding:"4px 11px", borderRadius:"20px", fontSize:"10px", fontWeight:"700", cursor:"pointer", border:"none", outline:"none", background:i===idx?`linear-gradient(90deg,${PURPLE},${theme.accent})`:i<idx?theme.accent+"20":"rgba(255,255,255,0.05)", color:i===idx?"#fff":i<idx?theme.accent:"rgba(255,255,255,0.28)", transition:"all 0.2s" }}>
               {i<idx?"✓ ":i===idx?"▶ ":""}{s.title?.split(' ').slice(0,3).join(' ')||`Scene ${i+1}`}
             </button>
           ))}
         </div>
 
-        {/* ── Create real Canva video banner ── */}
-        <div style={{ background:`linear-gradient(90deg,${PURPLE}22,${theme.accent}22)`, borderTop:`1px solid ${theme.accent}30`, padding:"12px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:"12px", flexWrap:"wrap" }}>
+        {/* ── Canva real video banner ── */}
+        <div style={{ background:`linear-gradient(90deg,rgba(123,47,190,0.2),rgba(0,196,204,0.2))`, borderTop:`1px solid rgba(123,47,190,0.3)`, padding:"14px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:"12px", flexWrap:"wrap" }}>
           <div>
+            <div style={{ color:"#fff", fontWeight:"800", fontSize:"13px" }}>🎬 Want a real animated cartoon video like Dr. Binocs?</div>
+            <div style={{ color:"rgba(255,255,255,0.45)", fontSize:"11px", marginTop:"2px" }}>
+              Open Canva → pick an animated kids video template → paste the script below → export MP4
+            </div>
+          </div>
+          <div style={{ display:"flex", gap:"8px", flexWrap:"wrap" }}>
+            <button onClick={() => { navigator.clipboard?.writeText(fullScript); }} style={{ padding:"8px 14px", background:"rgba(255,255,255,0.08)", color:"rgba(255,255,255,0.8)", border:"1px solid rgba(255,255,255,0.2)", borderRadius:"8px", fontWeight:"700", fontSize:"12px", cursor:"pointer" }}>
+              📋 Copy Script
+            </button>
+            <a href={canvaUrl} target="_blank" rel="noreferrer" style={{ padding:"8px 16px", background:`linear-gradient(135deg,${PURPLE},${theme.accent})`, color:"#fff", borderRadius:"8px", fontWeight:"800", fontSize:"12px", textDecoration:"none" }}>
+              🎨 Open Canva →
+            </a>
+          </div>
+        </div>
+
+        {/* Script preview (collapsible) */}
+        <details style={{ background:"#030305", borderTop:"1px solid rgba(255,255,255,0.06)" }}>
+          <summary style={{ padding:"10px 20px", fontSize:"11px", color:"rgba(255,255,255,0.4)", cursor:"pointer", fontWeight:"700" }}>📄 View full video script for Canva</summary>
+          <div style={{ padding:"14px 20px", background:"#04040a" }}>
+            {scenes.map((s,i) => (
+              <div key={i} style={{ marginBottom:"16px", borderLeft:`2px solid ${theme.accent}44`, paddingLeft:"12px" }}>
+                <div style={{ color:theme.accent, fontSize:"10px", fontWeight:"900", textTransform:"uppercase", letterSpacing:"1px", marginBottom:"4px" }}>Scene {i+1}: {s.title}</div>
+                <div style={{ color:"rgba(255,255,255,0.7)", fontSize:"12px", lineHeight:"1.6" }}>{s.narration}</div>
+                {s.key_fact && <div style={{ color:"rgba(255,255,255,0.4)", fontSize:"11px", marginTop:"4px", fontStyle:"italic" }}>⚡ {s.key_fact}</div>}
+              </div>
+            ))}
+          </div>
+        </details>
+
+        {/* old banner end */}
+        <div style={{ display:"none" }}><div>
             <div style={{ color:"#fff", fontWeight:"800", fontSize:"13px" }}>🎬 Want a real animated video like Dr. Binocs?</div>
             <div style={{ color:"rgba(255,255,255,0.5)", fontSize:"11px", marginTop:"2px" }}>Open Canva and use an animated video template with this lesson's script</div>
           </div>
