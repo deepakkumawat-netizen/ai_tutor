@@ -3292,7 +3292,7 @@ function SubjectPage({ profile, onHome }) {
     try {
       // Collect the lesson already shown on screen (all assistant messages)
       const lessonText = messages
-        .filter(m => m.role === "assistant")
+        .filter(m => m.role === "bot" || m.role === "assistant")
         .map(m => {
           if (typeof m.content === "string") return m.content;
           if (Array.isArray(m.content)) return m.content.map(c => c.text || "").join(" ");
