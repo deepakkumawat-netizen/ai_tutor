@@ -2493,148 +2493,297 @@ function PracticeTestView({ topic, grade, subject, apiUrl, onScoreSave }) {
 }
 
 // ─── CANVA VIDEO VIEW ─────────────────────────────────────────────────────────
+// ─── CANVA VIDEO PLAYER ───────────────────────────────────────────────────────
 function CanvaLessonView({ slides, loading, error, topic, onRetry }) {
-  const CANVA_BLUE = "#7B2FBE";
+  const TEAL   = "#00C4CC";
+  const PURPLE = "#7B2FBE";
+  const DARK   = "#0d1117";
+  const BOARD  = "#0f1923";
+
+  const sections = React.useMemo(() => {
+    if (!slides) return [];
+    const list = [];
+    if (slides.intro_slide) list.push({
+      label: "Introduction", type: "intro",
+      heading: slides.intro_slide.heading,
+      narration: slides.intro_slide.narration,
+      points: [],
+      visual: slides.intro_slide.visual_cue,
+    });
+    (slides.topic_slides || []).forEach((s) => list.push({
+      label: s.topic || s.heading, type: "topic",
+      heading: s.heading,
+      narration: s.narration,
+      points: s.key_points || [],
+      example: s.example,
+      visual: s.visual_cue,
+      duration: s.duration,
+    }));
+    if (slides.summary_slide) list.push({
+      label: "Summary", type: "summary",
+      heading: slides.summary_slide.heading,
+      narration: slides.summary_slide.narration,
+      points: slides.summary_slide.recap_points || [],
+      cta: slides.summary_slide.call_to_action,
+    });
+    return list;
+  }, [slides]);
+
+  const total = sections.length;
+  const [idx, setIdx]           = React.useState(0);
+  const [playing, setPlaying]   = React.useState(false);
+  const [paused,  setPaused]    = React.useState(false);
+  const [speaking, setSpeaking] = React.useState(false);
+  const synthRef = React.useRef(typeof window !== "undefined" ? window.speechSynthesis : null);
+
+  const section = sections[idx] || {};
+
+  const getBestVoice = () => {
+    const voices = synthRef.current?.getVoices() || [];
+    return (
+      voices.find(v => v.name === "Google UK English Female") ||
+      voices.find(v => /zira|karen|moira|samantha|victoria/i.test(v.name)) ||
+      voices.find(v => /female/i.test(v.name) && v.lang.startsWith("en")) ||
+      voices.find(v => v.lang.startsWith("en")) ||
+      voices[0] || null
+    );
+  };
+
+  const speakSection = React.useCallback((secIdx, autoAdvance = true) => {
+    const synth = synthRef.current;
+    if (!synth) return;
+    synth.cancel();
+    const s = sections[secIdx];
+    if (!s?.narration) return;
+    const utter = new SpeechSynthesisUtterance(s.narration);
+    utter.rate = 0.88; utter.pitch = 1.05; utter.volume = 1.0;
+    const voice = getBestVoice();
+    if (voice) utter.voice = voice;
+    setSpeaking(true);
+    utter.onend = () => {
+      setSpeaking(false);
+      if (!autoAdvance) return;
+      const next = secIdx + 1;
+      if (next < sections.length) {
+        setTimeout(() => { setIdx(next); speakSection(next, true); }, 600);
+      } else {
+        setPlaying(false); setPaused(false);
+      }
+    };
+    utter.onerror = () => { setSpeaking(false); setPlaying(false); };
+    synth.speak(utter);
+  }, [sections]);
+
+  const handlePlay = () => {
+    const synth = synthRef.current;
+    if (paused && synth?.paused) { synth.resume(); setPaused(false); setPlaying(true); return; }
+    setPlaying(true); setPaused(false);
+    speakSection(idx, true);
+  };
+  const handlePause = () => { synthRef.current?.pause(); setPlaying(false); setPaused(true); setSpeaking(false); };
+  const handleStop  = () => { synthRef.current?.cancel(); setPlaying(false); setPaused(false); setSpeaking(false); setIdx(0); };
+  const handlePrev  = () => {
+    synthRef.current?.cancel(); setSpeaking(false);
+    const prev = Math.max(0, idx - 1); setIdx(prev);
+    if (playing) speakSection(prev, true);
+  };
+  const handleNext  = () => {
+    synthRef.current?.cancel(); setSpeaking(false);
+    const next = Math.min(total - 1, idx + 1); setIdx(next);
+    if (playing) speakSection(next, true);
+  };
+  const handleSeek  = (i) => {
+    synthRef.current?.cancel(); setSpeaking(false); setIdx(i);
+    if (playing) speakSection(i, true);
+  };
+
+  React.useEffect(() => () => synthRef.current?.cancel(), []);
 
   if (loading) return (
     <div style={{ display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"60px 20px", gap:"16px" }}>
-      <div style={{ fontSize:"48px", animation:"spin 2s linear infinite" }}>🎨</div>
-      <div style={{ fontSize:"18px", fontWeight:"700", color:"var(--text-primary)" }}>Building your video from this lesson...</div>
-      <div style={{ fontSize:"14px", color:"var(--text-secondary)" }}>Converting your lesson content into a Canva video script</div>
-      <style>{`@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }`}</style>
+      <div style={{ fontSize:"52px", animation:"spin 1.5s linear infinite" }}>🎓</div>
+      <div style={{ fontSize:"18px", fontWeight:"700", color:"var(--text-primary)" }}>Preparing your lesson...</div>
+      <div style={{ fontSize:"14px", color:"var(--text-secondary)" }}>Setting up teacher voice and lesson content</div>
     </div>
   );
 
   if (error) return (
-    <div style={{ padding:"32px", textAlign:"center" }}>
-      <div style={{ fontSize:"32px", marginBottom:"12px" }}>⚠️</div>
+    <div style={{ padding:"40px", textAlign:"center" }}>
+      <div style={{ fontSize:"36px", marginBottom:"12px" }}>⚠️</div>
       <div style={{ color:"#ef4444", fontWeight:"600", marginBottom:"16px" }}>{error}</div>
-      <button onClick={onRetry} style={{ padding:"10px 24px", background:CANVA_BLUE, color:"#fff", border:"none", borderRadius:"8px", cursor:"pointer", fontWeight:"600" }}>Try Again</button>
+      <button onClick={onRetry} style={{ padding:"10px 24px", background:PURPLE, color:"#fff", border:"none", borderRadius:"8px", cursor:"pointer", fontWeight:"600" }}>Try Again</button>
     </div>
   );
 
-  if (!slides) return null;
+  if (!slides || total === 0) return null;
 
-  const { video_title, grade, total_duration, intro_slide, topic_slides = [], summary_slide, canva_video_url, canva_template_url } = slides;
-
-  return (
-    <div style={{ padding:"16px", maxWidth:"860px", margin:"0 auto" }}>
-
-      {/* Header */}
-      <div style={{ background:`linear-gradient(135deg, ${CANVA_BLUE}, #00C4CC)`, borderRadius:"16px", padding:"24px", marginBottom:"20px", color:"#fff" }}>
-        <div style={{ fontSize:"13px", fontWeight:"600", opacity:0.8, marginBottom:"6px" }}>🎨 CANVA VIDEO SCRIPT</div>
-        <div style={{ fontSize:"22px", fontWeight:"800", marginBottom:"8px" }}>{video_title}</div>
-        <div style={{ display:"flex", gap:"16px", fontSize:"13px", opacity:0.9 }}>
-          <span>📚 {grade}</span>
-          <span>🎬 {topic_slides.length + 2} slides</span>
-          <span>⏱ {total_duration}</span>
-        </div>
-        <div style={{ display:"flex", gap:"10px", marginTop:"16px", flexWrap:"wrap" }}>
-          <a href={canva_video_url} target="_blank" rel="noreferrer"
-            style={{ padding:"10px 20px", background:"#fff", color:CANVA_BLUE, borderRadius:"8px", fontWeight:"700", fontSize:"14px", textDecoration:"none", display:"inline-flex", alignItems:"center", gap:"6px" }}>
-            🎬 Create Video in Canva
-          </a>
-          <a href={canva_template_url} target="_blank" rel="noreferrer"
-            style={{ padding:"10px 20px", background:"rgba(255,255,255,0.2)", color:"#fff", borderRadius:"8px", fontWeight:"600", fontSize:"14px", textDecoration:"none", border:"1px solid rgba(255,255,255,0.4)", display:"inline-flex", alignItems:"center", gap:"6px" }}>
-            🖼 Find Matching Template
-          </a>
-        </div>
-      </div>
-
-      {/* How to use */}
-      <div style={{ background:"var(--bg-secondary)", borderRadius:"12px", padding:"14px 18px", marginBottom:"20px", fontSize:"13px", color:"var(--text-secondary)", borderLeft:`4px solid ${CANVA_BLUE}` }}>
-        <strong style={{ color:"var(--text-primary)" }}>📋 How to use:</strong> Click <em>Create Video in Canva</em> → choose a video template → add one slide per topic below → paste the narration as speaker notes → export as video.
-      </div>
-
-      {/* Intro Slide */}
-      {intro_slide && (
-        <SlideCard number={0} type="intro" badge="🎬 Intro Slide" heading={intro_slide.heading}
-          narration={intro_slide.narration} visual={intro_slide.visual_cue} color="#6366f1" />
-      )}
-
-      {/* Topic Slides */}
-      {topic_slides.map((s, i) => (
-        <SlideCard key={i} number={i + 1} type="topic" badge={`📌 Topic ${i + 1}`}
-          heading={s.heading} topic={s.topic}
-          keyPoints={s.key_points} narration={s.narration}
-          example={s.example} visual={s.visual_cue} duration={s.duration}
-          color={CANVA_BLUE} />
-      ))}
-
-      {/* Summary Slide */}
-      {summary_slide && (
-        <SlideCard number={topic_slides.length + 1} type="summary" badge="✅ Summary Slide"
-          heading={summary_slide.heading} keyPoints={summary_slide.recap_points}
-          narration={summary_slide.narration} cta={summary_slide.call_to_action}
-          color="#10b981" />
-      )}
-
-    </div>
-  );
-}
-
-function SlideCard({ number, badge, heading, topic, keyPoints, narration, example, visual, duration, cta, color }) {
-  const [copied, setCopied] = React.useState(false);
-
-  const copyNarration = () => {
-    navigator.clipboard.writeText(narration || "");
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
+  const sectionColor = section.type === "intro" ? "#6366f1" : section.type === "summary" ? "#10b981" : TEAL;
 
   return (
-    <div style={{ background:"var(--bg-secondary)", borderRadius:"12px", padding:"18px", marginBottom:"14px", border:`1px solid var(--border-color)`, borderLeft:`4px solid ${color}` }}>
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"10px", flexWrap:"wrap", gap:"8px" }}>
-        <div style={{ display:"flex", alignItems:"center", gap:"8px" }}>
-          <span style={{ background:color, color:"#fff", borderRadius:"6px", padding:"3px 10px", fontSize:"11px", fontWeight:"700" }}>{badge}</span>
-          {duration && <span style={{ fontSize:"11px", color:"var(--text-secondary)", background:"var(--bg-tertiary)", padding:"3px 8px", borderRadius:"6px" }}>⏱ {duration}</span>}
+    <div style={{ padding:"12px", maxWidth:"820px", margin:"0 auto" }}>
+      <style>{`
+        @keyframes teacherBob { 0%,100%{transform:translateY(0) scale(1)} 50%{transform:translateY(-8px) scale(1.05)} }
+        @keyframes mouthTalk  { 0%,100%{transform:scaleY(1)} 50%{transform:scaleY(0.3)} }
+        @keyframes soundBar   { 0%,100%{transform:scaleY(0.3)} 50%{transform:scaleY(1)} }
+        @keyframes textIn     { from{opacity:0;transform:translateX(-10px)} to{opacity:1;transform:translateX(0)} }
+        @keyframes boardPulse { 0%,100%{box-shadow:0 0 0 0 rgba(0,196,204,0)} 50%{box-shadow:0 0 0 6px rgba(0,196,204,0.1)} }
+      `}</style>
+
+      {/* ── Classroom container ── */}
+      <div style={{ background:DARK, borderRadius:"20px", overflow:"hidden", boxShadow:"0 12px 50px rgba(0,0,0,0.7)" }}>
+
+        {/* ── Top bar ── */}
+        <div style={{ background:`linear-gradient(90deg, ${PURPLE}, ${TEAL})`, padding:"12px 20px", display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <div>
+            <div style={{ color:"#fff", fontWeight:"800", fontSize:"15px" }}>{slides.video_title}</div>
+            <div style={{ color:"rgba(255,255,255,0.75)", fontSize:"12px" }}>{slides.grade} · {slides.subject} · {slides.total_duration}</div>
+          </div>
+          <div style={{ background:"rgba(0,0,0,0.25)", borderRadius:"8px", padding:"4px 10px", color:"rgba(255,255,255,0.9)", fontSize:"12px", fontWeight:"600" }}>
+            📚 {section.label}
+          </div>
         </div>
-        <div style={{ fontSize:"20px", fontWeight:"800", color:"var(--text-secondary)", opacity:0.3 }}>#{number + 1}</div>
-      </div>
 
-      {topic && <div style={{ fontSize:"11px", color:color, fontWeight:"600", marginBottom:"4px", textTransform:"uppercase", letterSpacing:"0.5px" }}>{topic}</div>}
-      <div style={{ fontSize:"17px", fontWeight:"700", color:"var(--text-primary)", marginBottom:"12px" }}>{heading}</div>
+        {/* ── Continuous progress bar ── */}
+        <div style={{ height:"3px", background:"rgba(255,255,255,0.08)" }}>
+          <div style={{ height:"100%", width:`${((idx + (speaking ? 0.5 : 0)) / Math.max(total,1)) * 100}%`, background:`linear-gradient(90deg,${PURPLE},${TEAL})`, transition:"width 0.8s ease" }} />
+        </div>
 
-      {keyPoints?.length > 0 && (
-        <div style={{ marginBottom:"12px" }}>
-          {keyPoints.map((p, i) => (
-            <div key={i} style={{ display:"flex", gap:"8px", alignItems:"flex-start", marginBottom:"6px", fontSize:"14px", color:"var(--text-primary)" }}>
-              <span style={{ color:color, fontWeight:"700", marginTop:"1px" }}>•</span>
-              <span>{p}</span>
+        {/* ── Main classroom: teacher + whiteboard ── */}
+        <div style={{ display:"flex", minHeight:"320px" }}>
+
+          {/* Teacher panel */}
+          <div style={{ width:"120px", flexShrink:0, background:"#0a0f1a", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"20px 8px", borderRight:"1px solid rgba(255,255,255,0.06)", gap:"10px" }}>
+            {/* Avatar */}
+            <div style={{ fontSize:"54px", lineHeight:1, animation: speaking ? "teacherBob 0.6s ease infinite" : "none", userSelect:"none" }}>
+              🧑‍🏫
             </div>
+            {/* Sound bars */}
+            <div style={{ display:"flex", gap:"3px", alignItems:"flex-end", height:"22px" }}>
+              {[0,1,2,3,4].map(i => (
+                <div key={i} style={{
+                  width:"3px", borderRadius:"2px",
+                  background: speaking ? TEAL : "rgba(255,255,255,0.15)",
+                  height: speaking ? `${[8,14,20,12,8][i]}px` : "4px",
+                  animation: speaking ? `soundBar 0.5s ease infinite ${i * 0.08}s` : "none",
+                  transition:"height 0.3s, background 0.3s",
+                  transformOrigin:"bottom"
+                }} />
+              ))}
+            </div>
+            {/* Status */}
+            <div style={{ color: speaking ? TEAL : "rgba(255,255,255,0.3)", fontSize:"10px", fontWeight:"700", textAlign:"center", letterSpacing:"0.5px", transition:"color 0.3s" }}>
+              {speaking ? "TEACHING" : paused ? "PAUSED" : playing ? "READY" : "PRESS ▶"}
+            </div>
+          </div>
+
+          {/* Whiteboard */}
+          <div key={idx} style={{ flex:1, background:BOARD, padding:"22px 26px", position:"relative", animation:"boardPulse 2s ease infinite", overflow:"hidden" }}>
+            {/* Section type label */}
+            <div style={{ color:sectionColor, fontSize:"10px", fontWeight:"800", textTransform:"uppercase", letterSpacing:"2px", marginBottom:"8px", animation:"textIn 0.4s ease both" }}>
+              {section.type === "intro" ? "▶ Introduction" : section.type === "summary" ? "✅ Summary" : `📖 ${section.label}`}
+            </div>
+
+            {/* Main heading */}
+            <div style={{ color:"#fff", fontSize:"19px", fontWeight:"800", marginBottom:"16px", lineHeight:"1.35", animation:"textIn 0.4s ease 0.05s both" }}>
+              {section.heading}
+            </div>
+
+            {/* Key points — teacher writes them like a whiteboard */}
+            {section.points?.length > 0 && (
+              <div style={{ marginBottom:"14px" }}>
+                {section.points.map((p, i) => (
+                  <div key={i} style={{ display:"flex", gap:"10px", marginBottom:"9px", color:"rgba(255,255,255,0.88)", fontSize:"14px", lineHeight:"1.6", animation:`textIn 0.4s ease ${0.1 + i*0.07}s both` }}>
+                    <span style={{ color:TEAL, fontWeight:"700", fontSize:"16px", lineHeight:"1.4", flexShrink:0 }}>→</span>
+                    <span>{p}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Example box */}
+            {section.example && (
+              <div style={{ background:"rgba(0,196,204,0.08)", borderRadius:"8px", padding:"10px 14px", marginBottom:"10px", fontSize:"13px", color:"rgba(255,255,255,0.85)", borderLeft:`3px solid ${TEAL}`, animation:"textIn 0.4s ease 0.3s both" }}>
+                <span style={{ fontWeight:"700", color:TEAL }}>💡 Example: </span>{section.example}
+              </div>
+            )}
+
+            {/* Call to action (summary only) */}
+            {section.cta && (
+              <div style={{ background:"rgba(16,185,129,0.1)", borderRadius:"8px", padding:"10px 14px", fontSize:"13px", color:"rgba(255,255,255,0.85)", borderLeft:"3px solid #10b981", animation:"textIn 0.4s ease 0.35s both" }}>
+                <span style={{ fontWeight:"700", color:"#10b981" }}>🚀 </span>{section.cta}
+              </div>
+            )}
+
+            {/* Visual cue hint (subtle watermark) */}
+            {section.visual && (
+              <div style={{ position:"absolute", bottom:"10px", right:"14px", color:"rgba(255,255,255,0.12)", fontSize:"11px", fontStyle:"italic", maxWidth:"180px", textAlign:"right" }}>
+                {section.visual}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* ── Teacher narration bar (like subtitles) ── */}
+        <div style={{ background:"rgba(255,255,255,0.04)", borderTop:"1px solid rgba(255,255,255,0.07)", padding:"10px 20px", display:"flex", alignItems:"flex-start", gap:"10px", minHeight:"52px" }}>
+          <span style={{ fontSize:"15px", marginTop:"1px", animation: speaking ? "mouthTalk 0.5s ease infinite" : "none" }}>🎙</span>
+          <div style={{ fontSize:"13px", color: speaking ? "rgba(255,255,255,0.9)" : "rgba(255,255,255,0.38)", fontStyle:"italic", lineHeight:"1.6", flex:1, transition:"color 0.3s" }}>
+            {speaking
+              ? section.narration
+              : paused
+              ? "⏸  Paused — press ▶ Play to continue the lesson"
+              : "Press ▶ Play below to start — your teacher will explain the lesson aloud"}
+          </div>
+        </div>
+
+        {/* ── Playback controls ── */}
+        <div style={{ display:"flex", justifyContent:"center", alignItems:"center", gap:"12px", padding:"14px 20px" }}>
+          <button onClick={handlePrev} disabled={idx === 0}
+            title="Previous topic"
+            style={{ width:"40px", height:"40px", borderRadius:"50%", border:"2px solid rgba(255,255,255,0.18)", background:"transparent", color: idx===0 ? "rgba(255,255,255,0.18)" : "#fff", fontSize:"17px", cursor: idx===0 ? "not-allowed":"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
+            ⏮
+          </button>
+
+          <button onClick={handleStop} title="Stop & restart"
+            style={{ width:"40px", height:"40px", borderRadius:"50%", border:"2px solid rgba(255,255,255,0.25)", background:"transparent", color:"#fff", fontSize:"15px", cursor:"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
+            ⏹
+          </button>
+
+          {(!playing || paused) ? (
+            <button onClick={handlePlay} title="Play lesson"
+              style={{ width:"64px", height:"64px", borderRadius:"50%", border:"none", background:`linear-gradient(135deg,${PURPLE},${TEAL})`, color:"#fff", fontSize:"28px", cursor:"pointer", boxShadow:`0 4px 24px rgba(123,47,190,0.6)`, display:"flex", alignItems:"center", justifyContent:"center" }}>
+              ▶
+            </button>
+          ) : (
+            <button onClick={handlePause} title="Pause"
+              style={{ width:"64px", height:"64px", borderRadius:"50%", border:"none", background:`linear-gradient(135deg,${PURPLE},${TEAL})`, color:"#fff", fontSize:"24px", cursor:"pointer", boxShadow:`0 4px 24px rgba(123,47,190,0.6)`, display:"flex", alignItems:"center", justifyContent:"center" }}>
+              ⏸
+            </button>
+          )}
+
+          <button onClick={handleNext} disabled={idx === total - 1} title="Next topic"
+            style={{ width:"40px", height:"40px", borderRadius:"50%", border:"2px solid rgba(255,255,255,0.18)", background:"transparent", color: idx===total-1 ? "rgba(255,255,255,0.18)" : "#fff", fontSize:"17px", cursor: idx===total-1 ? "not-allowed":"pointer", display:"flex", alignItems:"center", justifyContent:"center" }}>
+            ⏭
+          </button>
+        </div>
+
+        {/* ── Chapter / topic nav (not dots — real topic names) ── */}
+        <div style={{ padding:"0 16px 16px", display:"flex", gap:"6px", flexWrap:"wrap", justifyContent:"center" }}>
+          {sections.map((s, i) => (
+            <button key={i} onClick={() => handleSeek(i)}
+              style={{
+                padding:"5px 12px", borderRadius:"20px", fontSize:"11px", fontWeight:"700", cursor:"pointer", border:"none",
+                background: i === idx
+                  ? `linear-gradient(90deg,${PURPLE},${TEAL})`
+                  : i < idx ? "rgba(0,196,204,0.15)" : "rgba(255,255,255,0.06)",
+                color: i === idx ? "#fff" : i < idx ? TEAL : "rgba(255,255,255,0.45)",
+                transition:"all 0.2s",
+                outline:"none"
+              }}>
+              {i < idx ? "✓ " : i === idx ? "▶ " : ""}{s.label}
+            </button>
           ))}
         </div>
-      )}
-
-      {example && (
-        <div style={{ background:"var(--bg-tertiary)", borderRadius:"8px", padding:"10px 14px", marginBottom:"12px", fontSize:"13px", color:"var(--text-secondary)" }}>
-          <span style={{ fontWeight:"600", color:"var(--text-primary)" }}>💡 Example: </span>{example}
-        </div>
-      )}
-
-      {visual && (
-        <div style={{ fontSize:"13px", color:"var(--text-secondary)", marginBottom:"12px" }}>
-          <span style={{ fontWeight:"600" }}>🖼 Visual: </span>{visual}
-        </div>
-      )}
-
-      {narration && (
-        <div style={{ background:`${color}15`, border:`1px solid ${color}30`, borderRadius:"8px", padding:"12px 14px" }}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"6px" }}>
-            <span style={{ fontSize:"12px", fontWeight:"700", color:color }}>🎙 NARRATION (Speaker Notes)</span>
-            <button onClick={copyNarration} style={{ fontSize:"11px", padding:"4px 10px", background:color, color:"#fff", border:"none", borderRadius:"6px", cursor:"pointer", fontWeight:"600" }}>
-              {copied ? "✓ Copied!" : "Copy"}
-            </button>
-          </div>
-          <div style={{ fontSize:"14px", color:"var(--text-primary)", lineHeight:"1.6", fontStyle:"italic" }}>{narration}</div>
-        </div>
-      )}
-
-      {cta && (
-        <div style={{ marginTop:"10px", fontSize:"14px", color:"var(--text-secondary)" }}>
-          <span style={{ fontWeight:"600", color:"var(--text-primary)" }}>🚀 Call to Action: </span>{cta}
-        </div>
-      )}
+      </div>
     </div>
   );
 }
