@@ -4233,7 +4233,6 @@ function SubjectPage({ profile, onHome }) {
                 { id:"flashcards",label:"📇 Flashcards" },
                 { id:"practice",  label:"📝 Test" },
                 { id:"progress",  label:"📊 Progress" },
-                { id:"canva",     label:"🎨 Canva",     onClick: () => { generateCanvaVideo(); } },
               ].map(tab => (
                 <button key={tab.id}
                   onClick={() => { setViewMode(tab.id); tab.onClick?.(); }}
@@ -4247,6 +4246,24 @@ function SubjectPage({ profile, onHome }) {
                 >{tab.label}</button>
               ))}
             </div>
+
+            {/* Canva Video Button */}
+            <button
+              onClick={() => { setViewMode("canva"); generateCanvaVideo(); }}
+              style={{
+                padding:"8px 14px",
+                background: viewMode === "canva" ? "linear-gradient(135deg,#7B2FBE,#00C4CC)" : "var(--bg-tertiary)",
+                border: viewMode === "canva" ? "none" : "2px solid #7B2FBE",
+                borderRadius:"8px",
+                cursor:"pointer",
+                color: viewMode === "canva" ? "#fff" : "#7B2FBE",
+                fontWeight:"700",
+                fontSize:"13px",
+                whiteSpace:"nowrap"
+              }}
+            >
+              🎨 Canva
+            </button>
 
             {/* Change Topic Button */}
             <button
