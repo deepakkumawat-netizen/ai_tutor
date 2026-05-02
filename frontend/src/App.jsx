@@ -4247,24 +4247,6 @@ function SubjectPage({ profile, onHome }) {
               ))}
             </div>
 
-            {/* Canva Video Button */}
-            <button
-              onClick={() => { setViewMode("canva"); generateCanvaVideo(); }}
-              style={{
-                padding:"8px 14px",
-                background: viewMode === "canva" ? "linear-gradient(135deg,#7B2FBE,#00C4CC)" : "var(--bg-tertiary)",
-                border: viewMode === "canva" ? "none" : "2px solid #7B2FBE",
-                borderRadius:"8px",
-                cursor:"pointer",
-                color: viewMode === "canva" ? "#fff" : "#7B2FBE",
-                fontWeight:"700",
-                fontSize:"13px",
-                whiteSpace:"nowrap"
-              }}
-            >
-              🎨 Canva
-            </button>
-
             {/* Change Topic Button */}
             <button
               onClick={() => { setActiveTopic(null); setShowTopicMenu(true); setMessages([]); setViewMode("lesson"); }}
@@ -4741,8 +4723,8 @@ function SubjectPage({ profile, onHome }) {
                       </div>
                     )}
 
-                    {/* Hear Explanation Button */}
-                    <div style={{ display:"flex", gap:"10px", marginTop:"16px", paddingTop:"12px", borderTop:`1px solid #e0e8f3` }}>
+                    {/* Hear Explanation + Canva Buttons */}
+                    <div style={{ display:"flex", gap:"10px", marginTop:"16px", paddingTop:"12px", borderTop:`1px solid #e0e8f3`, flexWrap:"wrap" }}>
                       <button
                         onClick={() => speakResponse(msg.content)}
                         style={{
@@ -4771,6 +4753,28 @@ function SubjectPage({ profile, onHome }) {
                         }}
                       >
                         {voiceState === "speaking" ? "⏹️ Stop" : "🔊 Hear Explanation"}
+                      </button>
+
+                      <button
+                        onClick={() => { setViewMode("canva"); generateCanvaVideo(); }}
+                        style={{
+                          display:"flex",
+                          alignItems:"center",
+                          gap:"6px",
+                          padding:"10px 16px",
+                          background:"linear-gradient(135deg,#7B2FBE,#00C4CC)",
+                          color:"#fff",
+                          border:"none",
+                          borderRadius:"8px",
+                          cursor:"pointer",
+                          fontWeight:"700",
+                          fontSize:"13px",
+                          transition:"all 0.2s"
+                        }}
+                        onMouseEnter={(e) => { e.currentTarget.style.transform="translateY(-1px)"; e.currentTarget.style.boxShadow="0 4px 14px rgba(123,47,190,0.5)"; }}
+                        onMouseLeave={(e) => { e.currentTarget.style.transform="translateY(0)"; e.currentTarget.style.boxShadow="none"; }}
+                      >
+                        🎨 Watch Lesson Video
                       </button>
                     </div>
 
