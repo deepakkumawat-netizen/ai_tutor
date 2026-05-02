@@ -731,13 +731,16 @@ Important: All content MUST come from the lesson text provided above. Create one
             messages=[{"role": "user", "content": prompt}],
             max_tokens=3500,
         )
+        import re
         raw = response.choices[0].message.content.strip()
         if raw.startswith("```"):
             raw = raw.split("```")[1]
             if raw.startswith("json"):
                 raw = raw[4:]
             raw = raw.rsplit("```", 1)[0]
-        data = json.loads(raw.strip())
+        # Remove trailing commas before } or ] (GPT sometimes adds them)
+        raw = re.sub(r',\s*([}\]])', r'\1', raw.strip())
+        data = json.loads(raw)
         canva_app_id = os.getenv("CANVA_APP_ID", "")
         search = data.get("canva_template_search", "educational video presentation")
         data["canva_video_url"] = f"https://www.canva.com/create/videos/"
