@@ -127,6 +127,17 @@ def session(chat_id):
             "qa_questions": [],
             "practice_data": {},
             "history": [],
+            # Flashcards
+            "flashcards": [],
+            "fc_idx": 0,
+            # Test
+            "test_questions": [],
+            "test_idx": 0,
+            "test_score": 0,
+            # Progress tracking
+            "lessons_done": 0,
+            "practice_total": 0,
+            "practice_correct": 0,
         }
     return sessions[chat_id]
 
@@ -208,13 +219,16 @@ def kb_subjects():
 def kb_main_menu(grade=None):
     emoji = grade_emoji(grade) if grade else "📚"
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton(f"📚 Topics",           callback_data="m:topics"),
-         InlineKeyboardButton(f"📖 Explain",          callback_data="m:explain")],
-        [InlineKeyboardButton(f"📝 Practice Quiz",    callback_data="m:practice"),
-         InlineKeyboardButton(f"🎥 Videos",           callback_data="m:videos")],
-        [InlineKeyboardButton(f"💬 Ask a Question",   callback_data="m:qa")],
-        [InlineKeyboardButton(f"📊 Change Grade",     callback_data="m:grade"),
-         InlineKeyboardButton(f"🔄 Change Subject",   callback_data="m:subject")],
+        [InlineKeyboardButton("📚 Topics",          callback_data="m:topics"),
+         InlineKeyboardButton("📖 Explain",         callback_data="m:explain")],
+        [InlineKeyboardButton("🃏 Flashcards",      callback_data="m:flashcards"),
+         InlineKeyboardButton("🧪 Take Test",       callback_data="m:test")],
+        [InlineKeyboardButton("📝 Practice Quiz",   callback_data="m:practice"),
+         InlineKeyboardButton("🎥 Videos",          callback_data="m:videos")],
+        [InlineKeyboardButton("💬 Ask a Question",  callback_data="m:qa")],
+        [InlineKeyboardButton("📊 My Progress",     callback_data="m:progress")],
+        [InlineKeyboardButton("🎓 Change Grade",    callback_data="m:grade"),
+         InlineKeyboardButton("🔄 Change Subject",  callback_data="m:subject")],
     ])
 
 def kb_topics(topics, prefix):
@@ -265,6 +279,32 @@ def kb_after_qa():
 
 def kb_home():
     return InlineKeyboardMarkup([[InlineKeyboardButton("🏠 Main Menu", callback_data="home")]])
+
+def kb_flashcard_front(idx, total):
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("👁 Reveal Answer", callback_data="fc:reveal")],
+        [InlineKeyboardButton("⏭ Skip", callback_data="fc:next"),
+         InlineKeyboardButton("🏠 Main Menu",    callback_data="home")],
+    ])
+
+def kb_flashcard_back(idx, total):
+    rows = []
+    if idx < total - 1:
+        rows.append([InlineKeyboardButton("⏭ Next Card",  callback_data="fc:next"),
+                     InlineKeyboardButton("🔁 Restart",   callback_data="fc:restart")])
+    else:
+        rows.append([InlineKeyboardButton("🔁 Start Over", callback_data="fc:restart")])
+    rows.append([InlineKeyboardButton("🏠 Main Menu", callback_data="home")])
+    return InlineKeyboardMarkup(rows)
+
+def kb_test_answer():
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("A", callback_data="tq:A"),
+         InlineKeyboardButton("B", callback_data="tq:B"),
+         InlineKeyboardButton("C", callback_data="tq:C"),
+         InlineKeyboardButton("D", callback_data="tq:D")],
+        [InlineKeyboardButton("🏠 Main Menu", callback_data="home")],
+    ])
 
 def kb_next_practice():
     return InlineKeyboardMarkup([
@@ -473,6 +513,27 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == "m:subject":
         await msg.reply_text("📚 Select your new *Subject* 👇", parse_mode="Markdown", reply_markup=kb_subjects())
 
+    elif data == "m:progress":
+        await _do_progress(msg, s)
+
+    elif data == "m:flashcards":
+        ok = await _fetch_topics(msg, s, "fc_topic")
+        if ok:
+            await msg.reply_text(
+                "🃏 *Which topic for Flashcards?*\n\nTap to select 👇",
+                parse_mode="Markdown",
+                reply_markup=kb_topics(s["topics"], "fc_topic"),
+            )
+
+    elif data == "m:test":
+        ok = await _fetch_topics(msg, s, "tt_topic")
+        if ok:
+            await msg.reply_text(
+                "🧪 *Which topic for Test?*\n\nTap to select 👇",
+                parse_mode="Markdown",
+                reply_markup=kb_topics(s["topics"], "tt_topic"),
+            )
+
     elif data == "m:topics":
         ok = await _fetch_topics(msg, s, "topic")
         if ok:
@@ -526,6 +587,66 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if 0 <= idx < len(s["topics"]):
             s["current_topic"] = s["topics"][idx]
             await _do_videos(msg, s)
+
+    elif data.startswith("fc_topic:"):
+        idx = int(data.split(":")[1])
+        if 0 <= idx < len(s["topics"]):
+            s["current_topic"] = s["topics"][idx]
+            await _do_flashcards(msg, s)
+
+    elif data.startswith("tt_topic:"):
+        idx = int(data.split(":")[1])
+        if 0 <= idx < len(s["topics"]):
+            s["current_topic"] = s["topics"][idx]
+            await _do_test(msg, s)
+
+    # ── FLASHCARD NAVIGATION ────────────────────────────────────────────────────
+    elif data == "fc:reveal":
+        await _show_fc_back(msg, s)
+
+    elif data == "fc:next":
+        s["fc_idx"] = min(s["fc_idx"] + 1, len(s["flashcards"]) - 1)
+        await _show_fc_front(msg, s)
+
+    elif data == "fc:restart":
+        s["fc_idx"] = 0
+        await _show_fc_front(msg, s)
+
+    # ── TEST ANSWER ─────────────────────────────────────────────────────────────
+    elif data.startswith("tq:"):
+        letter   = data.split(":")[1]
+        questions = s["test_questions"]
+        idx      = s["test_idx"]
+        if idx < len(questions):
+            q       = questions[idx]
+            correct = q.get("correct", "").upper()
+            is_correct = letter.upper() == correct
+            if is_correct:
+                s["test_score"] += 1
+                s["practice_correct"] += 1
+            total = len(questions)
+            result_text = (
+                f"{'✅ Correct!' if is_correct else f'❌ Wrong! Correct answer: *{correct}*'}\n\n"
+                f"💡 _{q.get('explanation', '')}_"
+            )
+            next_idx = idx + 1
+            if next_idx < total:
+                s["test_idx"] = next_idx
+                await msg.reply_text(result_text, parse_mode="Markdown")
+                await _show_test_q(msg, s)
+            else:
+                score = s["test_score"]
+                pct   = round(score / total * 100)
+                encourage = grade_encourage(s["grade"])
+                await msg.reply_text(
+                    f"{result_text}\n\n"
+                    f"🏆 *Test Complete!*\n━━━━━━━━━━━━━━━━\n\n"
+                    f"Score: *{score}/{total}* ({pct}%)\n\n"
+                    f"{'🌟 Excellent!' if pct >= 80 else '📚 Keep practicing!' if pct >= 50 else '💪 Review the topic and try again!'}\n"
+                    f"{encourage}",
+                    parse_mode="Markdown",
+                    reply_markup=kb_home(),
+                )
 
     # ── PRACTICE ────────────────────────────────────────────────────────────────
     elif data in ("p:topic", "p:next"):
@@ -618,6 +739,7 @@ async def _do_explain(msg, s):
         explanation = result.get("explanation", "No explanation available.")
         if len(explanation) > 3800:
             explanation = explanation[:3800] + "..."
+        s["lessons_done"] = s.get("lessons_done", 0) + 1
         s["history"].append({"role": "user", "content": f"Explain {topic}"})
         s["history"].append({"role": "assistant", "content": explanation})
         s["history"] = s["history"][-10:]
@@ -709,6 +831,151 @@ async def _do_qa(msg, s, topic=None):
         f"Tap a question to get the answer 👇",
         parse_mode="Markdown",
         reply_markup=kb_qa(questions),
+    )
+
+# ── Flashcard & Test AI helpers ────────────────────────────────────────────────
+async def _fetch_flashcards(subject, grade, topic=None):
+    from mcp_server import client as openai_client
+    import json
+    t = topic or subject
+    try:
+        resp = await asyncio.to_thread(
+            openai_client.chat.completions.create,
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are an expert teacher. Return ONLY valid JSON, no markdown."},
+                {"role": "user", "content": (
+                    f"Create 8 flashcards for '{t}' ({subject}, {grade}).\n"
+                    "front = key term or question, back = clear answer (1-2 sentences).\n"
+                    'Return JSON: {"flashcards": [{"front": "...", "back": "..."}]}'
+                )}
+            ],
+            temperature=0.7, max_tokens=1200,
+        )
+        raw = resp.choices[0].message.content.strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"): raw = raw[4:]
+            raw = raw.rsplit("```", 1)[0]
+        return json.loads(raw).get("flashcards", [])
+    except Exception as e:
+        logger.error(f"flashcards fetch error: {e}")
+        return []
+
+async def _fetch_test(subject, grade, topic=None):
+    from mcp_server import client as openai_client
+    import json
+    t = topic or subject
+    try:
+        resp = await asyncio.to_thread(
+            openai_client.chat.completions.create,
+            model="gpt-4o-mini",
+            messages=[
+                {"role": "system", "content": "You are an expert teacher. Return ONLY valid JSON, no markdown."},
+                {"role": "user", "content": (
+                    f"Create 5 multiple-choice questions for '{t}' ({subject}, {grade}).\n"
+                    "4 options each labeled A/B/C/D, one correct, brief explanation.\n"
+                    'Return JSON: {"questions": [{"question":"...","options":["A) ...","B) ...","C) ...","D) ..."],"correct":"A","explanation":"..."}]}'
+                )}
+            ],
+            temperature=0.7, max_tokens=1800,
+        )
+        raw = resp.choices[0].message.content.strip()
+        if raw.startswith("```"):
+            raw = raw.split("```")[1]
+            if raw.startswith("json"): raw = raw[4:]
+            raw = raw.rsplit("```", 1)[0]
+        return json.loads(raw).get("questions", [])
+    except Exception as e:
+        logger.error(f"test fetch error: {e}")
+        return []
+
+async def _do_flashcards(msg, s):
+    subject = s["subject"] or "General"
+    grade   = s["grade"] or "Grade 6"
+    topic   = s["current_topic"]
+    label   = topic or subject
+    await msg.reply_text(f"🃏 Loading flashcards for *{label}*...", parse_mode="Markdown")
+    cards = await _fetch_flashcards(subject, grade, topic)
+    if not cards:
+        await msg.reply_text("❌ Could not generate flashcards. Try again.", reply_markup=kb_home())
+        return
+    s["flashcards"] = cards
+    s["fc_idx"] = 0
+    await _show_fc_front(msg, s)
+
+async def _show_fc_front(msg, s):
+    cards = s["flashcards"]
+    idx   = s["fc_idx"]
+    card  = cards[idx]
+    total = len(cards)
+    await msg.reply_text(
+        f"🃏 *Card {idx+1}/{total}*\n━━━━━━━━━━━━━━━━\n\n"
+        f"❓ *{card['front']}*\n\n_Tap 'Reveal Answer' when ready 👇_",
+        parse_mode="Markdown",
+        reply_markup=kb_flashcard_front(idx, total),
+    )
+
+async def _show_fc_back(msg, s):
+    cards = s["flashcards"]
+    idx   = s["fc_idx"]
+    card  = cards[idx]
+    total = len(cards)
+    await msg.reply_text(
+        f"🃏 *Card {idx+1}/{total}*\n━━━━━━━━━━━━━━━━\n\n"
+        f"❓ {card['front']}\n\n"
+        f"✅ *{card['back']}*",
+        parse_mode="Markdown",
+        reply_markup=kb_flashcard_back(idx, total),
+    )
+
+async def _do_test(msg, s):
+    subject = s["subject"] or "General"
+    grade   = s["grade"] or "Grade 6"
+    topic   = s["current_topic"]
+    label   = topic or subject
+    await msg.reply_text(f"🧪 Generating *{grade}* test for *{label}*...", parse_mode="Markdown")
+    questions = await _fetch_test(subject, grade, topic)
+    if not questions:
+        await msg.reply_text("❌ Could not generate test. Try again.", reply_markup=kb_home())
+        return
+    s["test_questions"] = questions
+    s["test_idx"]   = 0
+    s["test_score"] = 0
+    s["practice_total"] += len(questions)
+    await _show_test_q(msg, s)
+
+async def _show_test_q(msg, s):
+    questions = s["test_questions"]
+    idx   = s["test_idx"]
+    q     = questions[idx]
+    total = len(questions)
+    opts  = "\n".join(q["options"])
+    await msg.reply_text(
+        f"🧪 *Question {idx+1}/{total}*\n━━━━━━━━━━━━━━━━\n\n"
+        f"{q['question']}\n\n{opts}\n\n_Tap your answer 👇_",
+        parse_mode="Markdown",
+        reply_markup=kb_test_answer(),
+    )
+
+async def _do_progress(msg, s):
+    grade   = s.get("grade") or "Not set"
+    subject = s.get("subject") or "Not set"
+    lessons = s.get("lessons_done", 0)
+    total   = s.get("practice_total", 0)
+    correct = s.get("practice_correct", 0)
+    pct     = round(correct / total * 100) if total else 0
+    emoji   = grade_emoji(grade)
+    await msg.reply_text(
+        f"{emoji} *My Learning Progress*\n━━━━━━━━━━━━━━━━\n\n"
+        f"🎓 Grade: *{grade}*\n"
+        f"📚 Subject: *{subject}*\n\n"
+        f"📖 Lessons Completed: *{lessons}*\n"
+        f"📝 Test Questions: *{total}*\n"
+        f"✅ Correct Answers: *{correct}* ({pct}%)\n\n"
+        f"{'🔥 Great work! Keep it up!' if lessons > 0 else '👆 Start a lesson to track your progress!'}",
+        parse_mode="Markdown",
+        reply_markup=kb_home(),
     )
 
 # ── Text handler — custom subject search + guard ───────────────────────────────
