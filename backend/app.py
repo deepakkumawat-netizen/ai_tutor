@@ -91,11 +91,29 @@ async def shutdown_event():
 @app.post("/telegram/webhook")
 async def telegram_webhook(request: Request):
     if not _telegram_app:
-        return JSONResponse({"ok": False, "error": "bot not initialized"}, status_code=503)
-    data = await request.json()
-    update = Update.de_json(data, _telegram_app.bot)
-    await _telegram_app.process_update(update)
+        return JSONResponse({"ok": True})  # return 200 so Telegram doesn't retry endlessly
+    try:
+        data = await request.json()
+        update = Update.de_json(data, _telegram_app.bot)
+        await _telegram_app.process_update(update)
+    except Exception as e:
+        print(f"[!] Webhook process error: {e}")
     return JSONResponse({"ok": True})
+
+@app.get("/telegram/status")
+async def telegram_status():
+    if not _telegram_app:
+        return JSONResponse({"bot": "not initialized"})
+    try:
+        info = await _telegram_app.bot.get_webhook_info()
+        return JSONResponse({
+            "bot": "running",
+            "webhook_url": info.url,
+            "pending_updates": info.pending_update_count,
+            "last_error": info.last_error_message,
+        })
+    except Exception as e:
+        return JSONResponse({"bot": "error", "detail": str(e)})
 
     if not DB_IMPORT_SUCCESS:
         print(f"[✗] DATABASE IMPORT FAILED: {DB_IMPORT_ERROR}")

@@ -458,11 +458,20 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ── Callback handler ───────────────────────────────────────────────────────────
 async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.callback_query
-    await query.answer()
-    chat_id = query.message.chat_id
-    s = session(chat_id)
-    data = query.data
-    msg = query.message
+    try:
+        await query.answer()
+    except Exception:
+        pass
+    try:
+        chat_id = query.message.chat_id
+        s = session(chat_id)
+        data = query.data
+        msg = query.message
+    except Exception as e:
+        logger.error(f"Callback setup error: {e}", exc_info=True)
+        return
+
+    try:
 
     # ── GRADE ───────────────────────────────────────────────────────────────────
     if data.startswith("grade:"):
@@ -756,6 +765,13 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logger.error(f"qa answer error: {e}")
                 await msg.reply_text("Sorry, couldn't get an answer. Try again.", reply_markup=kb_after_qa())
 
+    except Exception as e:
+        logger.error(f"handle_callback error (data={data!r}): {e}", exc_info=True)
+        try:
+            await msg.reply_text("Something went wrong. Tap /start to restart.", reply_markup=kb_home())
+        except Exception:
+            pass
+
 # ── Action functions ───────────────────────────────────────────────────────────
 
 async def _do_explain(msg, s):
@@ -1011,34 +1027,40 @@ async def _do_progress(msg, s):
 
 # ── Text handler — custom subject search + guard ───────────────────────────────
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    chat_id = update.effective_chat.id
-    s = session(chat_id)
-    text = update.message.text.strip()
-    msg = update.message
+    try:
+        chat_id = update.effective_chat.id
+        s = session(chat_id)
+        text = update.message.text.strip()
+        msg = update.message
 
-    # ── Custom subject search ────────────────────────────────────────────────────
-    if s["state"] == "ask_custom_subject":
-        subject = text.title()
-        s["subject"] = subject
-        s["state"] = "ready"
-        s["topics"] = []
-        s["current_topic"] = None
-        emoji = grade_emoji(s["grade"])
-        await msg.reply_text(
-            f"🔍 *Subject: {subject}*\n"
-            f"━━━━━━━━━━━━━━━━\n"
-            f"{emoji} Grade: *{s['grade']}*  |  📚 *{subject}*\n"
-            f"Use the buttons below to start! 👇",
-            parse_mode="Markdown",
-            reply_markup=kb_main_menu(s.get("grade")),
-        )
-        return
+        # ── Custom subject search ────────────────────────────────────────────────
+        if s["state"] == "ask_custom_subject":
+            subject = text.title()
+            s["subject"] = subject
+            s["state"] = "ready"
+            s["topics"] = []
+            s["current_topic"] = None
+            emoji = grade_emoji(s["grade"])
+            await msg.reply_text(
+                f"🔍 Subject: {subject}\n"
+                f"━━━━━━━━━━━━━━━━\n"
+                f"{emoji} Grade: {s['grade']}  |  {subject}\n"
+                f"Use the buttons below to start! 👇",
+                reply_markup=kb_main_menu(s.get("grade")),
+            )
+            return
 
-    # ── All other text → show menu ───────────────────────────────────────────────
-    if not s.get("subject"):
-        await msg.reply_text("👆 Complete setup first — select your Grade 👇", reply_markup=kb_grades())
-    else:
-        await _send_main_menu(msg, s)
+        # ── All other text → show menu ───────────────────────────────────────
+        if not s.get("subject"):
+            await msg.reply_text("👆 Complete setup first — select your Grade 👇", reply_markup=kb_grades())
+        else:
+            await _send_main_menu(msg, s)
+    except Exception as e:
+        logger.error(f"handle_text error: {e}", exc_info=True)
+        try:
+            await update.message.reply_text("Something went wrong. Tap /start to restart.")
+        except Exception:
+            pass
 
 # ── Build PTB Application (called once from app.py startup) ───────────────────
 def create_application():
