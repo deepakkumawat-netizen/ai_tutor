@@ -8,7 +8,7 @@ import os
 import re
 import asyncio
 import logging
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (
     Application, CommandHandler, MessageHandler,
     CallbackQueryHandler, filters, ContextTypes
@@ -216,30 +216,20 @@ def kb_subjects():
         [InlineKeyboardButton("🔍 Search Any Subject", callback_data="subject:_other")],
     ])
 
-# ── Persistent chip keyboard (always visible at bottom) ────────────────────────
-def main_chip_keyboard():
-    return ReplyKeyboardMarkup([
-        ["📚 Topics",        "📖 Explain",    "🃏 Flashcards"],
-        ["🧪 Take Test",     "📝 Quiz",       "🎥 Videos"],
-        ["💬 Ask",           "📊 Progress",   "⚙️ Settings"],
-    ], resize_keyboard=True, is_persistent=True)
-
-# Map chip text → action (used in handle_text)
-CHIP_ACTIONS = {
-    "📚 Topics":     "m:topics",
-    "📖 Explain":    "m:explain",
-    "🃏 Flashcards": "m:flashcards",
-    "🧪 Take Test":  "m:test",
-    "📝 Quiz":       "m:practice",
-    "🎥 Videos":     "m:videos",
-    "💬 Ask":        "m:qa",
-    "📊 Progress":   "m:progress",
-    "⚙️ Settings":   "m:settings",
-}
-
 def kb_main_menu(grade=None):
-    # Kept for backward compat — now only used as fallback
-    return None
+    emoji = grade_emoji(grade) if grade else "📚"
+    return InlineKeyboardMarkup([
+        [InlineKeyboardButton("📚 Topics",        callback_data="m:topics"),
+         InlineKeyboardButton("📖 Explain",       callback_data="m:explain")],
+        [InlineKeyboardButton("🃏 Flashcards",    callback_data="m:flashcards"),
+         InlineKeyboardButton("🧪 Take Test",     callback_data="m:test")],
+        [InlineKeyboardButton("📝 Practice Quiz", callback_data="m:practice"),
+         InlineKeyboardButton("🎥 Videos",        callback_data="m:videos")],
+        [InlineKeyboardButton("💬 Ask a Question",callback_data="m:qa"),
+         InlineKeyboardButton("📊 My Progress",   callback_data="m:progress")],
+        [InlineKeyboardButton("🎓 Change Grade",  callback_data="m:grade"),
+         InlineKeyboardButton("🔄 Change Subject",callback_data="m:subject")],
+    ])
 
 def kb_settings():
     return InlineKeyboardMarkup([
@@ -424,7 +414,7 @@ async def _send_main_menu(msg, s):
         f"━━━━━━━━━━━━━━━━\n"
         f"Use the buttons below to start 👇",
         parse_mode="Markdown",
-        reply_markup=main_chip_keyboard(),
+        reply_markup=kb_main_menu(s.get("grade")),
     )
 
 async def _fetch_topics(msg, s, prefix):
@@ -517,7 +507,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"━━━━━━━━━━━━━━━━\n"
             f"Use the buttons below to start! 👇",
             parse_mode="Markdown",
-            reply_markup=main_chip_keyboard(),
+            reply_markup=kb_main_menu(s.get("grade")),
         )
 
     # ── SUBJECT (search / other) ─────────────────────────────────────────────
@@ -552,10 +542,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     elif data == "m:restart":
         sessions.pop(chat_id, None)
-        await msg.reply_text(
-            "🔄 Bot restarted! Send /start to begin again.",
-            reply_markup=ReplyKeyboardRemove(),
-        )
+        await msg.reply_text("🔄 Bot restarted! Send /start to begin again.")
 
     elif data == "m:grade":
         await msg.reply_text("🎓 Select your new *Grade* 👇", parse_mode="Markdown", reply_markup=kb_grades())
@@ -1058,66 +1045,15 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"{emoji} Grade: *{s['grade']}*  |  📚 *{subject}*\n"
             f"Use the buttons below to start! 👇",
             parse_mode="Markdown",
-            reply_markup=main_chip_keyboard(),
+            reply_markup=kb_main_menu(s.get("grade")),
         )
         return
 
-    # ── Chip keyboard taps ───────────────────────────────────────────────────────
-    if text in CHIP_ACTIONS:
-        if not s.get("subject"):
-            await msg.reply_text("👆 Please complete setup first — select your Grade 👇", reply_markup=kb_grades())
-            return
-        action = CHIP_ACTIONS[text]
-        # Route to the same logic as inline callbacks
-        if action == "m:topics":
-            ok = await _fetch_topics(msg, s, "topic")
-            if ok:
-                emoji = grade_emoji(s["grade"])
-                await msg.reply_text(
-                    f"{emoji} *{s['subject']} Topics — {s['grade']}*\n\nTap a topic to explore 👇",
-                    parse_mode="Markdown",
-                    reply_markup=kb_topics(s["topics"], "topic"),
-                )
-        elif action == "m:explain":
-            ok = await _fetch_topics(msg, s, "explain")
-            if ok:
-                await msg.reply_text("📖 *Which topic to explain?*\n\nTap to select 👇", parse_mode="Markdown", reply_markup=kb_topics(s["topics"], "explain"))
-        elif action == "m:flashcards":
-            ok = await _fetch_topics(msg, s, "fc_topic")
-            if ok:
-                await msg.reply_text("🃏 *Which topic for Flashcards?*\n\nTap to select 👇", parse_mode="Markdown", reply_markup=kb_topics(s["topics"], "fc_topic"))
-        elif action == "m:test":
-            ok = await _fetch_topics(msg, s, "tt_topic")
-            if ok:
-                await msg.reply_text("🧪 *Which topic for Test?*\n\nTap to select 👇", parse_mode="Markdown", reply_markup=kb_topics(s["topics"], "tt_topic"))
-        elif action == "m:practice":
-            await _do_practice(msg, s)
-        elif action == "m:videos":
-            ok = await _fetch_topics(msg, s, "vtopic")
-            if ok:
-                await msg.reply_text("🎥 *Which topic's videos?*\n\nTap to select 👇", parse_mode="Markdown", reply_markup=kb_topics(s["topics"], "vtopic"))
-        elif action == "m:qa":
-            await _do_qa(msg, s, s["current_topic"])
-        elif action == "m:progress":
-            await _do_progress(msg, s)
-        elif action == "m:settings":
-            await msg.reply_text(
-                f"⚙️ *Settings*\n━━━━━━━━━━━━━━━━\n"
-                f"🎓 Grade: *{s.get('grade','Not set')}*\n"
-                f"📚 Subject: *{s.get('subject','Not set')}*",
-                parse_mode="Markdown",
-                reply_markup=kb_settings(),
-            )
-        return
-
-    # ── Setup not complete ───────────────────────────────────────────────────────
+    # ── All other text → show menu ───────────────────────────────────────────────
     if not s.get("subject"):
         await msg.reply_text("👆 Complete setup first — select your Grade 👇", reply_markup=kb_grades())
     else:
-        await msg.reply_text(
-            f"👇 Use the buttons below to navigate!",
-            reply_markup=main_chip_keyboard(),
-        )
+        await _send_main_menu(msg, s)
 
 # ── Build PTB Application (called once from app.py startup) ───────────────────
 def create_application():
