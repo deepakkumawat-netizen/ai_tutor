@@ -471,8 +471,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         logger.error(f"Callback setup error: {e}", exc_info=True)
         return
 
-    try:
-
     # ── GRADE ───────────────────────────────────────────────────────────────────
     if data.startswith("grade:"):
         raw = data.split(":", 1)[1]
@@ -764,13 +762,6 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except Exception as e:
                 logger.error(f"qa answer error: {e}")
                 await msg.reply_text("Sorry, couldn't get an answer. Try again.", reply_markup=kb_after_qa())
-
-    except Exception as e:
-        logger.error(f"handle_callback error (data={data!r}): {e}", exc_info=True)
-        try:
-            await msg.reply_text("Something went wrong. Tap /start to restart.", reply_markup=kb_home())
-        except Exception:
-            pass
 
 # ── Action functions ───────────────────────────────────────────────────────────
 
