@@ -8,7 +8,7 @@ import os
 import re
 import asyncio
 import logging
-from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup, ReplyKeyboardMarkup, KeyboardButton, ReplyKeyboardRemove
 from telegram.ext import (
     Application, CommandHandler, MessageHandler,
     CallbackQueryHandler, filters, ContextTypes
@@ -167,68 +167,85 @@ async def _nlp_strategy(question):
 def kb_grades():
     return InlineKeyboardMarkup([
         [InlineKeyboardButton("🌟 Kindergarten", callback_data="grade:Kindergarten")],
-        [InlineKeyboardButton("Grade 1", callback_data="grade:1"),
-         InlineKeyboardButton("Grade 2", callback_data="grade:2"),
-         InlineKeyboardButton("Grade 3", callback_data="grade:3")],
-        [InlineKeyboardButton("Grade 4", callback_data="grade:4"),
-         InlineKeyboardButton("Grade 5", callback_data="grade:5"),
-         InlineKeyboardButton("Grade 6", callback_data="grade:6")],
-        [InlineKeyboardButton("Grade 7", callback_data="grade:7"),
-         InlineKeyboardButton("Grade 8", callback_data="grade:8"),
-         InlineKeyboardButton("Grade 9", callback_data="grade:9")],
-        [InlineKeyboardButton("Grade 10", callback_data="grade:10"),
-         InlineKeyboardButton("Grade 11", callback_data="grade:11"),
-         InlineKeyboardButton("Grade 12", callback_data="grade:12")],
+        [InlineKeyboardButton("⭐ Grade 1",  callback_data="grade:1"),
+         InlineKeyboardButton("🌈 Grade 2",  callback_data="grade:2"),
+         InlineKeyboardButton("🦋 Grade 3",  callback_data="grade:3")],
+        [InlineKeyboardButton("🚀 Grade 4",  callback_data="grade:4"),
+         InlineKeyboardButton("💡 Grade 5",  callback_data="grade:5"),
+         InlineKeyboardButton("🔬 Grade 6",  callback_data="grade:6")],
+        [InlineKeyboardButton("📐 Grade 7",  callback_data="grade:7"),
+         InlineKeyboardButton("🧮 Grade 8",  callback_data="grade:8"),
+         InlineKeyboardButton("⚗️ Grade 9",  callback_data="grade:9")],
+        [InlineKeyboardButton("🎯 Grade 10", callback_data="grade:10"),
+         InlineKeyboardButton("📊 Grade 11", callback_data="grade:11"),
+         InlineKeyboardButton("🏆 Grade 12", callback_data="grade:12")],
     ])
 
 def kb_ages():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("4",  callback_data="age:4"),
-         InlineKeyboardButton("5",  callback_data="age:5"),
-         InlineKeyboardButton("6",  callback_data="age:6"),
-         InlineKeyboardButton("7",  callback_data="age:7")],
-        [InlineKeyboardButton("8",  callback_data="age:8"),
-         InlineKeyboardButton("9",  callback_data="age:9"),
-         InlineKeyboardButton("10", callback_data="age:10"),
-         InlineKeyboardButton("11", callback_data="age:11")],
-        [InlineKeyboardButton("12", callback_data="age:12"),
-         InlineKeyboardButton("13", callback_data="age:13"),
-         InlineKeyboardButton("14", callback_data="age:14"),
-         InlineKeyboardButton("15", callback_data="age:15")],
-        [InlineKeyboardButton("16", callback_data="age:16"),
-         InlineKeyboardButton("17", callback_data="age:17"),
-         InlineKeyboardButton("18", callback_data="age:18"),
-         InlineKeyboardButton("18+", callback_data="age:18+")],
+        [InlineKeyboardButton("4 yrs",  callback_data="age:4"),
+         InlineKeyboardButton("5 yrs",  callback_data="age:5"),
+         InlineKeyboardButton("6 yrs",  callback_data="age:6"),
+         InlineKeyboardButton("7 yrs",  callback_data="age:7")],
+        [InlineKeyboardButton("8 yrs",  callback_data="age:8"),
+         InlineKeyboardButton("9 yrs",  callback_data="age:9"),
+         InlineKeyboardButton("10 yrs", callback_data="age:10"),
+         InlineKeyboardButton("11 yrs", callback_data="age:11")],
+        [InlineKeyboardButton("12 yrs", callback_data="age:12"),
+         InlineKeyboardButton("13 yrs", callback_data="age:13"),
+         InlineKeyboardButton("14 yrs", callback_data="age:14"),
+         InlineKeyboardButton("15 yrs", callback_data="age:15")],
+        [InlineKeyboardButton("16 yrs", callback_data="age:16"),
+         InlineKeyboardButton("17 yrs", callback_data="age:17"),
+         InlineKeyboardButton("18 yrs", callback_data="age:18"),
+         InlineKeyboardButton("18+",    callback_data="age:18+")],
     ])
 
 def kb_subjects():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("🐍 Python",      callback_data="subject:Python"),
-         InlineKeyboardButton("📐 Mathematics", callback_data="subject:Mathematics")],
-        [InlineKeyboardButton("🔬 Science",     callback_data="subject:Science"),
-         InlineKeyboardButton("📖 English",     callback_data="subject:English")],
-        [InlineKeyboardButton("🌍 Spanish",     callback_data="subject:Spanish"),
-         InlineKeyboardButton("💻 JavaScript",  callback_data="subject:JavaScript")],
-        [InlineKeyboardButton("🤖 AI & ML",     callback_data="subject:AI and Machine Learning"),
-         InlineKeyboardButton("📊 Data Science",callback_data="subject:Data Science")],
-        [InlineKeyboardButton("🎨 Art & Craft", callback_data="subject:Art and Craft"),
-         InlineKeyboardButton("🌿 Environment", callback_data="subject:Environmental Science")],
+        [InlineKeyboardButton("🐍 Python",       callback_data="subject:Python"),
+         InlineKeyboardButton("📐 Mathematics",  callback_data="subject:Mathematics")],
+        [InlineKeyboardButton("🔬 Science",      callback_data="subject:Science"),
+         InlineKeyboardButton("📖 English",      callback_data="subject:English")],
+        [InlineKeyboardButton("🌍 Spanish",      callback_data="subject:Spanish"),
+         InlineKeyboardButton("💻 JavaScript",   callback_data="subject:JavaScript")],
+        [InlineKeyboardButton("🤖 AI & ML",      callback_data="subject:AI and Machine Learning"),
+         InlineKeyboardButton("📊 Data Science", callback_data="subject:Data Science")],
+        [InlineKeyboardButton("🎨 Art & Craft",  callback_data="subject:Art and Craft"),
+         InlineKeyboardButton("🌿 Environment",  callback_data="subject:Environmental Science")],
         [InlineKeyboardButton("🔍 Search Any Subject", callback_data="subject:_other")],
     ])
 
+# ── Persistent chip keyboard (always visible at bottom) ────────────────────────
+def main_chip_keyboard():
+    return ReplyKeyboardMarkup([
+        ["📚 Topics",        "📖 Explain",    "🃏 Flashcards"],
+        ["🧪 Take Test",     "📝 Quiz",       "🎥 Videos"],
+        ["💬 Ask",           "📊 Progress",   "⚙️ Settings"],
+    ], resize_keyboard=True, is_persistent=True)
+
+# Map chip text → action (used in handle_text)
+CHIP_ACTIONS = {
+    "📚 Topics":     "m:topics",
+    "📖 Explain":    "m:explain",
+    "🃏 Flashcards": "m:flashcards",
+    "🧪 Take Test":  "m:test",
+    "📝 Quiz":       "m:practice",
+    "🎥 Videos":     "m:videos",
+    "💬 Ask":        "m:qa",
+    "📊 Progress":   "m:progress",
+    "⚙️ Settings":   "m:settings",
+}
+
 def kb_main_menu(grade=None):
-    emoji = grade_emoji(grade) if grade else "📚"
+    # Kept for backward compat — now only used as fallback
+    return None
+
+def kb_settings():
     return InlineKeyboardMarkup([
-        [InlineKeyboardButton("📚 Topics",          callback_data="m:topics"),
-         InlineKeyboardButton("📖 Explain",         callback_data="m:explain")],
-        [InlineKeyboardButton("🃏 Flashcards",      callback_data="m:flashcards"),
-         InlineKeyboardButton("🧪 Take Test",       callback_data="m:test")],
-        [InlineKeyboardButton("📝 Practice Quiz",   callback_data="m:practice"),
-         InlineKeyboardButton("🎥 Videos",          callback_data="m:videos")],
-        [InlineKeyboardButton("💬 Ask a Question",  callback_data="m:qa")],
-        [InlineKeyboardButton("📊 My Progress",     callback_data="m:progress")],
-        [InlineKeyboardButton("🎓 Change Grade",    callback_data="m:grade"),
-         InlineKeyboardButton("🔄 Change Subject",  callback_data="m:subject")],
+        [InlineKeyboardButton("🎓 Change Grade",   callback_data="m:grade"),
+         InlineKeyboardButton("📚 Change Subject", callback_data="m:subject")],
+        [InlineKeyboardButton("🔄 Restart Bot",    callback_data="m:restart")],
     ])
 
 def kb_topics(topics, prefix):
@@ -278,7 +295,7 @@ def kb_after_qa():
     ])
 
 def kb_home():
-    return InlineKeyboardMarkup([[InlineKeyboardButton("🏠 Main Menu", callback_data="home")]])
+    return InlineKeyboardMarkup([[InlineKeyboardButton("🏠 Home", callback_data="home")]])
 
 def kb_flashcard_front(idx, total):
     return InlineKeyboardMarkup([
@@ -397,15 +414,17 @@ async def _smart_answer(question: str, grade: str) -> str:
 
 async def _send_main_menu(msg, s):
     emoji = grade_emoji(s.get("grade"))
-    grade_label = s.get("grade") or "Not set"
+    grade_label   = s.get("grade") or "Not set"
     subject_label = s.get("subject") or "Not set"
     await msg.reply_text(
-        f"{emoji} *AI Tutor — Main Menu*\n\n"
-        f"🎓 Grade: *{grade_label}*\n"
-        f"📚 Subject: *{subject_label}*\n\n"
-        f"What would you like to do? 👇",
+        f"{emoji} *AI Tutor — Ready to Learn!*\n"
+        f"━━━━━━━━━━━━━━━━\n"
+        f"🎓 *Grade:* {grade_label}\n"
+        f"📚 *Subject:* {subject_label}\n"
+        f"━━━━━━━━━━━━━━━━\n"
+        f"Use the buttons below to start 👇",
         parse_mode="Markdown",
-        reply_markup=kb_main_menu(s.get("grade")),
+        reply_markup=main_chip_keyboard(),
     )
 
 async def _fetch_topics(msg, s, prefix):
@@ -430,12 +449,18 @@ async def cmd_start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "grade": None, "age": None, "subject": None,
         "state": "ask_grade", "topics": [], "current_topic": None,
         "qa_questions": [], "practice_data": {}, "history": [],
+        "flashcards": [], "fc_idx": 0,
+        "test_questions": [], "test_idx": 0, "test_score": 0,
+        "lessons_done": 0, "practice_total": 0, "practice_correct": 0,
     }
     await update.message.reply_text(
-        "🎓 *Welcome to CodeVidhya AI Tutor!*\n\n"
-        "Your smart AI teacher — from Kindergarten to Grade 12! 🌟\n\n"
-        "Everything works by *tapping buttons* — no typing needed.\n\n"
-        "📌 First, select your *Grade* 👇",
+        "👋 *Welcome to AI Tutor!*\n"
+        "━━━━━━━━━━━━━━━━\n"
+        "🎓 Smart learning for *Kindergarten to Grade 12*\n\n"
+        "✅ Lessons  ✅ Flashcards  ✅ Tests\n"
+        "✅ Videos   ✅ Practice    ✅ Progress\n"
+        "━━━━━━━━━━━━━━━━\n"
+        "📌 *Step 1:* Select your Grade 👇",
         parse_mode="Markdown",
         reply_markup=kb_grades(),
     )
@@ -457,7 +482,9 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         s["history"] = []
         emoji = grade_emoji(grade)
         await msg.reply_text(
-            f"{emoji} *{grade}* selected!\n\nNow tell me your *Age* 👇",
+            f"{emoji} *{grade}* selected!\n"
+            f"━━━━━━━━━━━━━━━━\n"
+            f"📌 *Step 2:* Select your Age 👇",
             parse_mode="Markdown",
             reply_markup=kb_ages(),
         )
@@ -466,7 +493,9 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data.startswith("age:"):
         s["age"] = data.split(":", 1)[1]
         await msg.reply_text(
-            f"✅ Age *{s['age']}* — got it!\n\nChoose your *Subject* 👇",
+            f"🎂 Age *{s['age']}* — noted!\n"
+            f"━━━━━━━━━━━━━━━━\n"
+            f"📌 *Step 3:* Choose your Subject 👇",
             parse_mode="Markdown",
             reply_markup=kb_subjects(),
         )
@@ -480,13 +509,15 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         s["current_topic"] = None
         emoji = grade_emoji(s["grade"])
         await msg.reply_text(
-            f"🎉 *All set!*\n\n"
+            f"🎉 *All Set — Let's Learn!*\n"
+            f"━━━━━━━━━━━━━━━━\n"
             f"{emoji} Grade: *{s['grade']}*\n"
             f"📚 Subject: *{subject}*\n"
-            f"🎂 Age: *{s['age']}*\n\n"
-            f"Tap a button to start learning! 👇",
+            f"🎂 Age: *{s['age']}*\n"
+            f"━━━━━━━━━━━━━━━━\n"
+            f"Use the buttons below to start! 👇",
             parse_mode="Markdown",
-            reply_markup=kb_main_menu(s["grade"]),
+            reply_markup=main_chip_keyboard(),
         )
 
     # ── SUBJECT (search / other) ─────────────────────────────────────────────
@@ -494,21 +525,40 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         s["state"] = "ask_custom_subject"
         await msg.reply_text(
             "🔍 *Search Any Subject*\n\n"
-            "Type the subject you want to learn below 👇\n\n"
-            "_Examples: History, Physics, Music, Coding, Geography..._",
+            "Type the subject you want to learn 👇\n"
+            "_Examples: History, Physics, Music, Geography..._",
             parse_mode="Markdown",
         )
 
     # ── HOME / MAIN MENU ────────────────────────────────────────────────────────
     elif data == "home":
         if not s["subject"]:
-            await msg.reply_text("👋 Let's set up first! Select your Grade:", reply_markup=kb_grades())
+            await msg.reply_text(
+                "👋 Let's get set up first!\n📌 Select your Grade 👇",
+                reply_markup=kb_grades()
+            )
         else:
             await _send_main_menu(msg, s)
 
     # ── MENU ACTIONS ────────────────────────────────────────────────────────────
+    elif data == "m:settings":
+        await msg.reply_text(
+            "⚙️ *Settings*\n━━━━━━━━━━━━━━━━\n"
+            f"🎓 Grade: *{s.get('grade','Not set')}*\n"
+            f"📚 Subject: *{s.get('subject','Not set')}*",
+            parse_mode="Markdown",
+            reply_markup=kb_settings(),
+        )
+
+    elif data == "m:restart":
+        sessions.pop(chat_id, None)
+        await msg.reply_text(
+            "🔄 Bot restarted! Send /start to begin again.",
+            reply_markup=ReplyKeyboardRemove(),
+        )
+
     elif data == "m:grade":
-        await msg.reply_text("📊 Select your new *Grade* 👇", parse_mode="Markdown", reply_markup=kb_grades())
+        await msg.reply_text("🎓 Select your new *Grade* 👇", parse_mode="Markdown", reply_markup=kb_grades())
 
     elif data == "m:subject":
         await msg.reply_text("📚 Select your new *Subject* 👇", parse_mode="Markdown", reply_markup=kb_subjects())
@@ -992,8 +1042,9 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     chat_id = update.effective_chat.id
     s = session(chat_id)
     text = update.message.text.strip()
+    msg = update.message
 
-    # Allow typing ONLY for custom subject search
+    # ── Custom subject search ────────────────────────────────────────────────────
     if s["state"] == "ask_custom_subject":
         subject = text.title()
         s["subject"] = subject
@@ -1001,25 +1052,71 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         s["topics"] = []
         s["current_topic"] = None
         emoji = grade_emoji(s["grade"])
-        await update.message.reply_text(
-            f"🔍 *Subject set to: {subject}*\n\n"
-            f"{emoji} Grade: *{s['grade']}*  |  📚 Subject: *{subject}*\n\n"
-            f"Tap a button to start learning! 👇",
+        await msg.reply_text(
+            f"🔍 *Subject: {subject}*\n"
+            f"━━━━━━━━━━━━━━━━\n"
+            f"{emoji} Grade: *{s['grade']}*  |  📚 *{subject}*\n"
+            f"Use the buttons below to start! 👇",
             parse_mode="Markdown",
-            reply_markup=kb_main_menu(s["grade"]),
+            reply_markup=main_chip_keyboard(),
         )
         return
 
-    # Guard: redirect all other text to buttons
-    if not s["subject"]:
-        await update.message.reply_text(
-            "👆 Please tap a button above to continue setup.",
-        )
+    # ── Chip keyboard taps ───────────────────────────────────────────────────────
+    if text in CHIP_ACTIONS:
+        if not s.get("subject"):
+            await msg.reply_text("👆 Please complete setup first — select your Grade 👇", reply_markup=kb_grades())
+            return
+        action = CHIP_ACTIONS[text]
+        # Route to the same logic as inline callbacks
+        if action == "m:topics":
+            ok = await _fetch_topics(msg, s, "topic")
+            if ok:
+                emoji = grade_emoji(s["grade"])
+                await msg.reply_text(
+                    f"{emoji} *{s['subject']} Topics — {s['grade']}*\n\nTap a topic to explore 👇",
+                    parse_mode="Markdown",
+                    reply_markup=kb_topics(s["topics"], "topic"),
+                )
+        elif action == "m:explain":
+            ok = await _fetch_topics(msg, s, "explain")
+            if ok:
+                await msg.reply_text("📖 *Which topic to explain?*\n\nTap to select 👇", parse_mode="Markdown", reply_markup=kb_topics(s["topics"], "explain"))
+        elif action == "m:flashcards":
+            ok = await _fetch_topics(msg, s, "fc_topic")
+            if ok:
+                await msg.reply_text("🃏 *Which topic for Flashcards?*\n\nTap to select 👇", parse_mode="Markdown", reply_markup=kb_topics(s["topics"], "fc_topic"))
+        elif action == "m:test":
+            ok = await _fetch_topics(msg, s, "tt_topic")
+            if ok:
+                await msg.reply_text("🧪 *Which topic for Test?*\n\nTap to select 👇", parse_mode="Markdown", reply_markup=kb_topics(s["topics"], "tt_topic"))
+        elif action == "m:practice":
+            await _do_practice(msg, s)
+        elif action == "m:videos":
+            ok = await _fetch_topics(msg, s, "vtopic")
+            if ok:
+                await msg.reply_text("🎥 *Which topic's videos?*\n\nTap to select 👇", parse_mode="Markdown", reply_markup=kb_topics(s["topics"], "vtopic"))
+        elif action == "m:qa":
+            await _do_qa(msg, s, s["current_topic"])
+        elif action == "m:progress":
+            await _do_progress(msg, s)
+        elif action == "m:settings":
+            await msg.reply_text(
+                f"⚙️ *Settings*\n━━━━━━━━━━━━━━━━\n"
+                f"🎓 Grade: *{s.get('grade','Not set')}*\n"
+                f"📚 Subject: *{s.get('subject','Not set')}*",
+                parse_mode="Markdown",
+                reply_markup=kb_settings(),
+            )
+        return
+
+    # ── Setup not complete ───────────────────────────────────────────────────────
+    if not s.get("subject"):
+        await msg.reply_text("👆 Complete setup first — select your Grade 👇", reply_markup=kb_grades())
     else:
-        emoji = grade_emoji(s["grade"])
-        await update.message.reply_text(
-            f"{emoji} Use the buttons to navigate — no typing needed! 👇",
-            reply_markup=kb_main_menu(s["grade"]),
+        await msg.reply_text(
+            f"👇 Use the buttons below to navigate!",
+            reply_markup=main_chip_keyboard(),
         )
 
 # ── Build PTB Application (called once from app.py startup) ───────────────────
