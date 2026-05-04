@@ -56,29 +56,40 @@ async def startup_event():
     print(f"[✓ STARTUP] AI Tutor Backend v2.0 - {time.time()}")
     print("="*60)
 
-    # Start Telegram bot via webhook (no polling — eliminates 409 Conflict)
+    # Start Telegram bot via webhook
+    token = os.getenv("TELEGRAM_BOT_TOKEN", "")
+    print(f"[i] TELEGRAM_BOT_TOKEN present: {bool(token)} (len={len(token)})")
+    base_url = os.getenv("RENDER_EXTERNAL_URL", "").rstrip("/")
+    print(f"[i] RENDER_EXTERNAL_URL: {base_url or '(not set)'}")
+
     try:
         from telegram_bot import create_application
         ptb = create_application()
-        if ptb:
+        if ptb is None:
+            print("[!] create_application returned None — token missing or empty")
+        else:
             await ptb.initialize()
             await ptb.start()
-            # Render automatically sets RENDER_EXTERNAL_URL for web services
-            base_url = os.getenv("RENDER_EXTERNAL_URL", "").rstrip("/")
+            _telegram_app = ptb  # set BEFORE webhook so status is always correct
+            print("[✓] Telegram bot initialized and started")
+
             if base_url:
                 webhook_url = f"{base_url}/telegram/webhook"
-                await ptb.bot.set_webhook(
-                    url=webhook_url,
-                    allowed_updates=["message", "callback_query"],
-                    drop_pending_updates=True,
-                )
-                print(f"[✓] Telegram webhook registered: {webhook_url}")
+                try:
+                    await ptb.bot.set_webhook(
+                        url=webhook_url,
+                        allowed_updates=["message", "callback_query"],
+                        drop_pending_updates=True,
+                    )
+                    print(f"[✓] Webhook registered: {webhook_url}")
+                except Exception as wh_err:
+                    print(f"[!] Webhook registration failed: {wh_err}")
             else:
-                print("[!] RENDER_EXTERNAL_URL not set — webhook not registered")
-            _telegram_app = ptb
-            print("[✓] Telegram AI Tutor Bot started")
+                print("[!] RENDER_EXTERNAL_URL not set — webhook skipped")
     except Exception as e:
-        print(f"[!] Telegram bot not started: {e}")
+        import traceback
+        print(f"[!] Telegram bot startup error: {e}")
+        print(traceback.format_exc())
 
 @app.on_event("shutdown")
 async def shutdown_event():
