@@ -836,58 +836,67 @@ async def _do_qa(msg, s, topic=None):
 # ── Flashcard & Test AI helpers ────────────────────────────────────────────────
 async def _fetch_flashcards(subject, grade, topic=None):
     from mcp_server import client as openai_client
-    import json
+    import json, re
     t = topic or subject
+    raw = ""
     try:
         resp = await asyncio.to_thread(
             openai_client.chat.completions.create,
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are an expert teacher. Return ONLY valid JSON, no markdown."},
+                {"role": "system", "content": "Return ONLY raw JSON. No markdown, no code fences, no explanation."},
                 {"role": "user", "content": (
                     f"Create 8 flashcards for '{t}' ({subject}, {grade}).\n"
                     "front = key term or question, back = clear answer (1-2 sentences).\n"
-                    'Return JSON: {"flashcards": [{"front": "...", "back": "..."}]}'
+                    'Return exactly: {"flashcards":[{"front":"...","back":"..."}]}'
                 )}
             ],
-            temperature=0.7, max_tokens=1200,
+            temperature=0.5, max_tokens=1200,
         )
         raw = resp.choices[0].message.content.strip()
-        if raw.startswith("```"):
+        if "```" in raw:
             raw = raw.split("```")[1]
-            if raw.startswith("json"): raw = raw[4:]
+            if raw.startswith("json"):
+                raw = raw[4:]
             raw = raw.rsplit("```", 1)[0]
+        raw = re.sub(r',\s*([}\]])', r'\1', raw.strip())
         return json.loads(raw).get("flashcards", [])
     except Exception as e:
-        logger.error(f"flashcards fetch error: {e}")
+        logger.error(f"flashcards fetch error: {e} | raw={raw[:200]}")
         return []
 
 async def _fetch_test(subject, grade, topic=None):
     from mcp_server import client as openai_client
-    import json
+    import json, re
     t = topic or subject
+    raw = ""
     try:
         resp = await asyncio.to_thread(
             openai_client.chat.completions.create,
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "You are an expert teacher. Return ONLY valid JSON, no markdown."},
+                {"role": "system", "content": "Return ONLY raw JSON. No markdown, no code fences, no explanation."},
                 {"role": "user", "content": (
-                    f"Create 5 multiple-choice questions for '{t}' ({subject}, {grade}).\n"
-                    "4 options each labeled A/B/C/D, one correct, brief explanation.\n"
-                    'Return JSON: {"questions": [{"question":"...","options":["A) ...","B) ...","C) ...","D) ..."],"correct":"A","explanation":"..."}]}'
+                    f"Create 5 MCQ questions about '{t}' for {grade} {subject} students.\n"
+                    "Each question has 4 options A/B/C/D, correct is just the letter, short explanation.\n"
+                    "Return exactly:\n"
+                    '{"questions":[{"question":"...","options":["A) ...","B) ...","C) ...","D) ..."],"correct":"A","explanation":"..."}]}'
                 )}
             ],
-            temperature=0.7, max_tokens=1800,
+            temperature=0.5, max_tokens=1800,
         )
         raw = resp.choices[0].message.content.strip()
-        if raw.startswith("```"):
+        if "```" in raw:
             raw = raw.split("```")[1]
-            if raw.startswith("json"): raw = raw[4:]
+            if raw.startswith("json"):
+                raw = raw[4:]
             raw = raw.rsplit("```", 1)[0]
-        return json.loads(raw).get("questions", [])
+        raw = re.sub(r',\s*([}\]])', r'\1', raw.strip())
+        questions = json.loads(raw).get("questions", [])
+        logger.info(f"Test generated: {len(questions)} questions for '{t}'")
+        return questions
     except Exception as e:
-        logger.error(f"test fetch error: {e}")
+        logger.error(f"test fetch error: {e} | raw={raw[:200]}")
         return []
 
 async def _do_flashcards(msg, s):
