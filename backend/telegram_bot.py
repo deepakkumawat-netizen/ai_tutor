@@ -663,13 +663,13 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 s["practice_correct"] += 1
             total = len(questions)
             result_text = (
-                f"{'✅ Correct!' if is_correct else f'❌ Wrong! Correct answer: *{correct}*'}\n\n"
-                f"💡 _{q.get('explanation', '')}_"
+                f"{'✅ Correct!' if is_correct else f'❌ Wrong! Correct answer: {correct}'}\n\n"
+                f"💡 {q.get('explanation', '')}"
             )
             next_idx = idx + 1
             if next_idx < total:
                 s["test_idx"] = next_idx
-                await msg.reply_text(result_text, parse_mode="Markdown")
+                await msg.reply_text(result_text)
                 await _show_test_q(msg, s)
             else:
                 score = s["test_score"]
@@ -677,11 +677,10 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 encourage = grade_encourage(s["grade"])
                 await msg.reply_text(
                     f"{result_text}\n\n"
-                    f"🏆 *Test Complete!*\n━━━━━━━━━━━━━━━━\n\n"
-                    f"Score: *{score}/{total}* ({pct}%)\n\n"
+                    f"🏆 Test Complete!\n━━━━━━━━━━━━━━━━\n\n"
+                    f"Score: {score}/{total} ({pct}%)\n\n"
                     f"{'🌟 Excellent!' if pct >= 80 else '📚 Keep practicing!' if pct >= 50 else '💪 Review the topic and try again!'}\n"
                     f"{encourage}",
-                    parse_mode="Markdown",
                     reply_markup=kb_home(),
                 )
 
@@ -692,8 +691,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     elif data == "p:hint":
         hint = s["practice_data"].get("hint") or GRADE_CONFIG.get(s["grade"] or "Grade 6", {}).get("hint_style", "Think carefully step by step! 💭")
         await msg.reply_text(
-            f"💡 *Hint*\n\n{hint}",
-            parse_mode="Markdown",
+            f"💡 Hint\n\n{hint}",
             reply_markup=kb_after_practice(),
         )
 
@@ -709,8 +707,7 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
             except Exception:
                 answer = "Please try another question."
         await msg.reply_text(
-            f"✅ *Answer*\n\n{answer}\n\n{grade_encourage(s['grade'])}",
-            parse_mode="Markdown",
+            f"✅ Answer\n\n{answer}\n\n{grade_encourage(s['grade'])}",
             reply_markup=kb_after_practice(),
         )
 
@@ -749,20 +746,15 @@ async def handle_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
         qs = s.get("qa_questions", [])
         if 0 <= idx < len(qs):
             question = qs[idx]
-            await msg.reply_text(f"⏳ _{question}_", parse_mode="Markdown")
+            await msg.reply_text(f"⏳ {question}", parse_mode=None)
             try:
                 answer, analysis = await _smart_answer(question, s["grade"] or "Grade 6")
                 if len(answer) > 3800:
                     answer = answer[:3800] + "..."
-                header = _format_nlp_header(analysis, s["grade"])
-                await msg.reply_text(
-                    f"{header}\n\n{answer}",
-                    parse_mode="Markdown",
-                    reply_markup=kb_after_qa(),
-                )
+                await msg.reply_text(answer, parse_mode=None, reply_markup=kb_after_qa())
             except Exception as e:
                 logger.error(f"qa answer error: {e}")
-                await msg.reply_text("Error getting answer.", reply_markup=kb_after_qa())
+                await msg.reply_text("Sorry, couldn't get an answer. Try again.", reply_markup=kb_after_qa())
 
 # ── Action functions ───────────────────────────────────────────────────────────
 
@@ -770,7 +762,7 @@ async def _do_explain(msg, s):
     topic = s["current_topic"]
     grade = s["grade"] or "Grade 6"
     emoji = grade_emoji(grade)
-    await msg.reply_text(f"{emoji} Explaining *{topic}*...", parse_mode="Markdown")
+    await msg.reply_text(f"{emoji} Explaining {topic}...", parse_mode=None)
     try:
         result = await _explain(topic, grade, s["subject"], s["history"])
         explanation = result.get("explanation", "No explanation available.")
@@ -780,16 +772,19 @@ async def _do_explain(msg, s):
         s["history"].append({"role": "user", "content": f"Explain {topic}"})
         s["history"].append({"role": "assistant", "content": explanation})
         s["history"] = s["history"][-10:]
+        # Send header and explanation separately to avoid Markdown parse errors
         await msg.reply_text(
-            f"{emoji} *{topic}*\n"
-            f"━━━━━━━━━━━━━━━━\n\n"
-            f"{explanation}",
-            parse_mode="Markdown",
+            f"{emoji} {topic}\n{'━'*16}",
+            parse_mode=None,
+        )
+        await msg.reply_text(
+            explanation,
+            parse_mode=None,
             reply_markup=kb_after_explain(),
         )
     except Exception as e:
         logger.error(f"explain error: {e}")
-        await msg.reply_text("Error explaining topic.", reply_markup=kb_home())
+        await msg.reply_text("Sorry, couldn't explain that topic. Please try again.", reply_markup=kb_home())
 
 async def _do_practice(msg, s):
     subject = s["subject"] or "Python"
@@ -809,26 +804,19 @@ async def _do_practice(msg, s):
             correct = correct_m.group(1).upper() if correct_m else ""
             clean_stem = re.sub(r"\n?(?:correct answer|answer)[:\s]+[A-D].*", "", stem, flags=re.IGNORECASE).strip()
             s["practice_data"] = {"question": q_text, "answer": correct, "correct": correct, "hint": ""}
+            await msg.reply_text(f"📝 Practice Question — {grade}\n{'━'*16}", parse_mode=None)
             await msg.reply_text(
-                f"📝 *Practice Question — {grade}*\n"
-                f"━━━━━━━━━━━━━━━━\n\n"
-                f"{clean_stem}\n\n"
-                f"_Tap the correct answer 👇_",
-                parse_mode="Markdown",
+                f"{clean_stem}\n\nTap the correct answer 👇",
+                parse_mode=None,
                 reply_markup=kb_mcq(options),
             )
         else:
             s["practice_data"] = {"question": q_text, "answer": "", "correct": "", "hint": ""}
-            await msg.reply_text(
-                f"📝 *Practice Question — {grade}*\n"
-                f"━━━━━━━━━━━━━━━━\n\n"
-                f"{q_text}",
-                parse_mode="Markdown",
-                reply_markup=kb_after_practice(),
-            )
+            await msg.reply_text(f"📝 Practice Question — {grade}\n{'━'*16}", parse_mode=None)
+            await msg.reply_text(q_text, parse_mode=None, reply_markup=kb_after_practice())
     except Exception as e:
         logger.error(f"practice error: {e}")
-        await msg.reply_text("Error generating question.", reply_markup=kb_home())
+        await msg.reply_text("Sorry, couldn't generate a question. Try again.", reply_markup=kb_home())
 
 async def _do_videos(msg, s):
     topic = s["current_topic"]
@@ -956,9 +944,8 @@ async def _show_fc_front(msg, s):
     card  = cards[idx]
     total = len(cards)
     await msg.reply_text(
-        f"🃏 *Card {idx+1}/{total}*\n━━━━━━━━━━━━━━━━\n\n"
-        f"❓ *{card['front']}*\n\n_Tap 'Reveal Answer' when ready 👇_",
-        parse_mode="Markdown",
+        f"🃏 Card {idx+1}/{total}\n━━━━━━━━━━━━━━━━\n\n"
+        f"❓ {card['front']}\n\n(Tap 'Reveal Answer' when ready 👇)",
         reply_markup=kb_flashcard_front(idx, total),
     )
 
@@ -968,10 +955,9 @@ async def _show_fc_back(msg, s):
     card  = cards[idx]
     total = len(cards)
     await msg.reply_text(
-        f"🃏 *Card {idx+1}/{total}*\n━━━━━━━━━━━━━━━━\n\n"
+        f"🃏 Card {idx+1}/{total}\n━━━━━━━━━━━━━━━━\n\n"
         f"❓ {card['front']}\n\n"
-        f"✅ *{card['back']}*",
-        parse_mode="Markdown",
+        f"✅ Answer: {card['back']}",
         reply_markup=kb_flashcard_back(idx, total),
     )
 
@@ -998,9 +984,8 @@ async def _show_test_q(msg, s):
     total = len(questions)
     opts  = "\n".join(q["options"])
     await msg.reply_text(
-        f"🧪 *Question {idx+1}/{total}*\n━━━━━━━━━━━━━━━━\n\n"
-        f"{q['question']}\n\n{opts}\n\n_Tap your answer 👇_",
-        parse_mode="Markdown",
+        f"🧪 Question {idx+1}/{total}\n━━━━━━━━━━━━━━━━\n\n"
+        f"{q['question']}\n\n{opts}\n\n(Tap your answer 👇)",
         reply_markup=kb_test_answer(),
     )
 
